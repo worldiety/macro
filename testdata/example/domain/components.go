@@ -10,6 +10,12 @@ type _Component interface {
 	Button | TextField | Text | Chapter | xcompo.RichText | xcompo.Icon | string | []string | []Text | map[int]Button
 }
 
+// Another doc.
+type Another interface {
+	// JustForDoc is stuff.
+	JustForDoc()
+}
+
 type Chapter int
 
 type Button struct {

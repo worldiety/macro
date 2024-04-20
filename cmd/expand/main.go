@@ -7,6 +7,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -24,9 +25,14 @@ func realMain() error {
 	dir := flag.String("dir", wd, "the directory to expand the files")
 	flag.Parse()
 
-	modDir, ok := golang.ModRootDir(*dir)
+	absDir, err := filepath.Abs(*dir)
+	if err != nil {
+		return fmt.Errorf("cannot resolve absolute path: %w", err)
+	}
+
+	modDir, ok := golang.ModRootDir(absDir)
 	if !ok {
-		return fmt.Errorf("not within a Go module directory: %s", *dir)
+		return fmt.Errorf("not within a Go module directory: %s", absDir)
 	}
 
 	slog.Info("expanding in module", slog.String("dir", modDir))
@@ -36,7 +42,7 @@ func realMain() error {
 		return fmt.Errorf("cannot parse and resolve Go module source: %w", err)
 	}
 
-	typeDeclr := golang.Macros(pkgs)
+	typeDeclr := golang.Parse(pkgs)
 
 	fmt.Printf("%+v", typeDeclr)
 	return nil

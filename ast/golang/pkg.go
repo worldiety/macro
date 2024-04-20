@@ -29,7 +29,7 @@ func Load(dir string) ([]*packages.Package, error) {
 
 var regexMacroCall = regexp.MustCompile(`!{{.+}}`)
 
-func Macros(pkgs []*packages.Package) []wdy.TypeDecl {
+func Parse(pkgs []*packages.Package) []wdy.TypeDecl {
 	var res []wdy.TypeDecl
 	for _, pkg := range pkgs {
 		typeDeclrComments := map[string]*ast.CommentGroup{}
@@ -81,9 +81,30 @@ func Macros(pkgs []*packages.Package) []wdy.TypeDecl {
 
 				switch obj := obj.Underlying().(type) {
 				case *types.Interface:
+					fmt.Println(obj)
+					if obj.NumMethods() > 0 {
+						var methods []wdy.Func
+						//conventional interface methods
+						for i := 0; i < obj.NumMethods(); i++ {
+							method := obj.Method(i)
+							if signature, ok := method.Type().(*types.Signature); ok {
+								_ = signature //TODO
+							}
+							methods = append(methods, wdy.Func{Name: method.Name()})
+							// TODO how to access the method doc?
+						}
+						res = append(res, wdy.Interface{
+							Ref:     namedRef,
+							Macros:  macros,
+							Comment: commentLines,
+							Methods: methods,
+						})
+					}
+
 					for i := 0; i < obj.NumEmbeddeds(); i++ {
 						switch obj := obj.EmbeddedType(i).(type) {
 						case *types.Union:
+							// we are a union type definition
 							union := &wdy.Union{
 								Ref:     namedRef,
 								Macros:  macros,
@@ -118,9 +139,37 @@ func intoRef(typ types.Type) (wdy.TypeReference, bool) {
 			Name: t.Name(),
 		}, true
 	case *types.Named:
+		var path string
+		if t.Obj().Pkg() != nil {
+			path = t.Obj().Pkg().Path() // e.g. error is no basic type but in universe
+		}
 		return wdy.TypeReference{
-			Path: t.Obj().Pkg().Path(),
+			Path: path,
 			Name: t.Obj().Name(),
+		}, true
+	case *types.Slice:
+		tp, ok := intoRef(t.Elem())
+		if !ok {
+			return wdy.TypeReference{}, false
+		}
+		return wdy.TypeReference{
+			Path:     "",
+			Name:     "[]",
+			TypeArgs: []wdy.TypeReference{tp},
+		}, true
+	case *types.Map:
+		key, ok := intoRef(t.Key())
+		if !ok {
+			return wdy.TypeReference{}, false
+		}
+		val, ok := intoRef(t.Elem())
+		if !ok {
+			return wdy.TypeReference{}, false
+		}
+		return wdy.TypeReference{
+			Path:     "",
+			Name:     "map",
+			TypeArgs: []wdy.TypeReference{key, val},
 		}, true
 	default:
 		return wdy.TypeReference{}, false
