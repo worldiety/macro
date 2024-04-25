@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/worldiety/macro/ast/golang"
+	"github.com/worldiety/macro/macro"
 	"log"
 	"log/slog"
 	"os"
@@ -37,13 +38,11 @@ func realMain() error {
 
 	slog.Info("expanding in module", slog.String("dir", modDir))
 
-	pkgs, err := golang.Load(modDir)
+	prog, err := golang.Parse(modDir)
 	if err != nil {
 		return fmt.Errorf("cannot parse and resolve Go module source: %w", err)
 	}
 
-	typeDeclr := golang.Parse(pkgs)
-
-	fmt.Printf("%+v", typeDeclr)
-	return nil
+	engine := macro.NewEngine(prog)
+	return engine.Exec()
 }

@@ -5,17 +5,29 @@ import (
 	"github.com/worldiety/macro/ast/wdy"
 	"go/ast"
 	"go/types"
+	"golang.org/x/tools/go/callgraph"
+	"golang.org/x/tools/go/callgraph/cha"
+	"golang.org/x/tools/go/callgraph/vta"
 	"golang.org/x/tools/go/packages"
+	"golang.org/x/tools/go/ssa"
+	"golang.org/x/tools/go/ssa/ssautil"
 	"log/slog"
 	"regexp"
 	"strings"
 )
 
-func Load(dir string) ([]*packages.Package, error) {
+type Program struct {
+	Pkgs      []*packages.Package
+	SSAPkgs   []*ssa.Package
+	TypeDecl  []wdy.TypeDecl
+	Callgraph *callgraph.Graph
+}
+
+func Parse(dir string) (*Program, error) {
 	pkgs, err := packages.Load(
 		&packages.Config{
 			Dir:  dir,
-			Mode: packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedModule,
+			Mode: packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedModule | packages.LoadAllSyntax,
 		},
 		"./...",
 	)
@@ -24,12 +36,67 @@ func Load(dir string) ([]*packages.Package, error) {
 		return nil, err
 	}
 
-	return pkgs, nil
+	// Create and build SSA-form program representation.
+	mode := ssa.InstantiateGenerics // instantiate generics by default for soundness
+	prog, ssaPkgs := ssautil.AllPackages(pkgs, mode)
+	prog.Build()
+	goModPath := pkgs[0].Module.Path
+	slog.Info("found module path", slog.String("dir", goModPath))
+
+	var cg *callgraph.Graph
+	cg = vta.CallGraph(ssautil.AllFunctions(prog), cha.CallGraph(prog))
+	cg.DeleteSyntheticNodes()
+	err = callgraph.GraphVisitEdges(cg, func(edge *callgraph.Edge) error {
+		var callerPkg string
+		if edge.Caller.Func.Pkg != nil {
+			callerPkg = edge.Caller.Func.Pkg.Pkg.Path()
+
+		}
+		callerFuncName := edge.Caller.Func.Name()
+
+		var calleePkg string
+		if edge.Callee.Func.Pkg != nil {
+			calleePkg = edge.Callee.Func.Pkg.Pkg.Path()
+
+		}
+		calleeFuncName := edge.Callee.Func.Name()
+
+		if !strings.HasPrefix(calleePkg, goModPath) && !strings.HasPrefix(callerPkg, goModPath) {
+			return nil
+		}
+
+		var callerReceiverName string
+		if rec := edge.Caller.Func.Signature.Recv(); rec != nil {
+			switch t := rec.Type().(type) {
+			case *types.Pointer:
+				switch t := t.Elem().(type) {
+				case *types.Named:
+					callerReceiverName = t.Obj().Name()
+				}
+			case *types.Named:
+				callerReceiverName = t.Obj().Name()
+			}
+		}
+
+		fmt.Printf("%s.%s.%s -> %s.%s\n", callerPkg, callerReceiverName, callerFuncName, calleePkg, calleeFuncName)
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("callgraph.GraphVisitEdges: %v", err)
+	}
+
+	return &Program{
+		Pkgs:      pkgs,
+		TypeDecl:  convertTypeDecl(pkgs),
+		SSAPkgs:   ssaPkgs,
+		Callgraph: cg,
+	}, nil
 }
 
 var regexMacroCall = regexp.MustCompile(`!{{.+}}`)
 
-func Parse(pkgs []*packages.Package) []wdy.TypeDecl {
+func convertTypeDecl(pkgs []*packages.Package) []wdy.TypeDecl {
 	var res []wdy.TypeDecl
 	for _, pkg := range pkgs {
 		typeDeclrComments := map[string]*ast.CommentGroup{}
@@ -58,9 +125,17 @@ func Parse(pkgs []*packages.Package) []wdy.TypeDecl {
 			var commentLines []string
 			comment, ok := typeDeclrComments[ident.Name]
 			if ok {
+
 				for _, c := range comment.List {
 					if macro := regexMacroCall.FindString(c.Text); macro != "" {
-						macros = append(macros, wdy.Macro(macro[1:]))
+						pos := pkg.Fset.Position(c.Pos())
+						macros = append(macros, wdy.Macro{
+							Template: macro[1:],
+							Origin: wdy.Pos{
+								File: pos.Filename,
+								Line: pos.Line,
+							},
+						})
 					} else {
 						commentLines = append(commentLines, strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(c.Text), "//")))
 					}
@@ -93,7 +168,7 @@ func Parse(pkgs []*packages.Package) []wdy.TypeDecl {
 							methods = append(methods, wdy.Func{Name: method.Name()})
 							// TODO how to access the method doc?
 						}
-						res = append(res, wdy.Interface{
+						res = append(res, &wdy.Interface{
 							Ref:     namedRef,
 							Macros:  macros,
 							Comment: commentLines,

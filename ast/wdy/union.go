@@ -10,6 +10,14 @@ type Union struct {
 	typeDecl
 }
 
+func (u *Union) GetMacros() []Macro {
+	return u.Macros
+}
+
+func (u *Union) GetRef() TypeReference {
+	return u.Ref
+}
+
 func (u *Union) String() string {
 	buf, err := json.MarshalIndent(u, " ", " ")
 	if err != nil {
