@@ -30,6 +30,11 @@ func NewStruct(name string) *Struct {
 	return &Struct{TypeName: name}
 }
 
+func (s *Struct) With(f func(*Struct)) *Struct {
+	f(s)
+	return s
+}
+
 func (s *Struct) AddEmbedded(t ...TypeDecl) *Struct {
 	for _, decl := range t {
 		assertNotAttached(decl)

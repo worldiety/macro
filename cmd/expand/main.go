@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/worldiety/macro/ast/golang"
-	"github.com/worldiety/macro/macro"
+	"github.com/worldiety/macro/pkg/wdl/macro"
 	"log"
 	"log/slog"
 	"os"
@@ -43,6 +43,10 @@ func realMain() error {
 		return fmt.Errorf("cannot parse and resolve Go module source: %w", err)
 	}
 
-	engine := macro.NewEngine(prog)
-	return engine.Exec()
+	engine := macro.NewEngine(prog.Program)
+	if err := engine.Exec(); err != nil {
+		return fmt.Errorf("engine execution failed: %w", err)
+	}
+
+	return engine.Emit()
 }

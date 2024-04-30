@@ -48,7 +48,6 @@ func (r *Renderer) tearDown() error {
 	if err := uninstallImporter(r); err != nil {
 		return fmt.Errorf("unable to uninstall importer: %w", err)
 	}
-
 	return nil
 }
 

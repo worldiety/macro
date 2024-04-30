@@ -2,8 +2,9 @@ package golang
 
 import (
 	"fmt"
-	"github.com/worldiety/macro/ast/wdy"
+	"github.com/worldiety/macro/pkg/wdl"
 	"go/ast"
+	"go/token"
 	"go/types"
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/callgraph/cha"
@@ -12,14 +13,14 @@ import (
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
 	"log/slog"
-	"regexp"
+	"path/filepath"
 	"strings"
 )
 
 type Program struct {
 	Pkgs      []*packages.Package
 	SSAPkgs   []*ssa.Package
-	TypeDecl  []wdy.TypeDecl
+	Program   *wdl.Program
 	Callgraph *callgraph.Graph
 }
 
@@ -86,116 +87,35 @@ func Parse(dir string) (*Program, error) {
 		return nil, fmt.Errorf("callgraph.GraphVisitEdges: %v", err)
 	}
 
-	return &Program{
+	pg := wdl.NewProgram(nil)
+
+	p := &Program{
+		Program:   pg,
 		Pkgs:      pkgs,
-		TypeDecl:  convertTypeDecl(pkgs),
 		SSAPkgs:   ssaPkgs,
 		Callgraph: cg,
-	}, nil
+	}
+
+	return p, p.init()
 }
 
-var regexMacroCall = regexp.MustCompile(`!{{.+}}`)
-
-func convertTypeDecl(pkgs []*packages.Package) []wdy.TypeDecl {
-	var res []wdy.TypeDecl
-	for _, pkg := range pkgs {
-		typeDeclrComments := map[string]*ast.CommentGroup{}
+func (p *Program) init() error {
+	for _, pkg := range p.Pkgs {
 		for _, syntax := range pkg.Syntax {
-		nextDeclr:
 			for _, decl := range syntax.Decls {
-				if decl, ok := decl.(*ast.GenDecl); ok {
-					if decl.Doc != nil {
-						for _, spec := range decl.Specs {
-							if spec, ok := spec.(*ast.TypeSpec); ok {
-								if spec.Name != nil {
-									typeDeclrComments[spec.Name.Name] = decl.Doc
-									continue nextDeclr
-								}
+				switch t := decl.(type) {
+				case *ast.GenDecl:
+					for _, spec := range t.Specs {
+						switch spec := spec.(type) {
+						case *ast.TypeSpec:
+							_, err := p.getTypeDef(p.Program, &wdl.TypeRef{
+								Qualifier: wdl.PkgImportQualifier(pkg.PkgPath),
+								Name:      wdl.Identifier(spec.Name.Name),
+							})
+
+							if err != nil {
+								return err
 							}
-						}
-
-					}
-
-				}
-			}
-		}
-
-		for ident, object := range pkg.TypesInfo.Defs {
-			var macros []wdy.Macro
-			var commentLines []string
-			comment, ok := typeDeclrComments[ident.Name]
-			if ok {
-
-				for _, c := range comment.List {
-					if macro := regexMacroCall.FindString(c.Text); macro != "" {
-						pos := pkg.Fset.Position(c.Pos())
-						macros = append(macros, wdy.Macro{
-							Template: macro[1:],
-							Origin: wdy.Pos{
-								File: pos.Filename,
-								Line: pos.Line,
-							},
-						})
-					} else {
-						commentLines = append(commentLines, strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(c.Text), "//")))
-					}
-				}
-			}
-
-			if len(commentLines) > 0 && commentLines[len(commentLines)-1] == "" {
-				commentLines = commentLines[:len(commentLines)-1]
-			}
-
-			if object == nil {
-				continue
-			}
-
-			switch obj := object.Type().(type) {
-			case *types.Named:
-				namedRef, _ := intoRef(obj)
-
-				switch obj := obj.Underlying().(type) {
-				case *types.Interface:
-					fmt.Println(obj)
-					if obj.NumMethods() > 0 {
-						var methods []wdy.Func
-						//conventional interface methods
-						for i := 0; i < obj.NumMethods(); i++ {
-							method := obj.Method(i)
-							if signature, ok := method.Type().(*types.Signature); ok {
-								_ = signature //TODO
-							}
-							methods = append(methods, wdy.Func{Name: method.Name()})
-							// TODO how to access the method doc?
-						}
-						res = append(res, &wdy.Interface{
-							Ref:     namedRef,
-							Macros:  macros,
-							Comment: commentLines,
-							Methods: methods,
-						})
-					}
-
-					for i := 0; i < obj.NumEmbeddeds(); i++ {
-						switch obj := obj.EmbeddedType(i).(type) {
-						case *types.Union:
-							// we are a union type definition
-							union := &wdy.Union{
-								Ref:     namedRef,
-								Macros:  macros,
-								Comment: commentLines,
-							}
-							for i := 0; i < obj.Len(); i++ {
-								ref, ok := intoRef(obj.Term(i).Type())
-								if !ok {
-									slog.Error("unsupported term type in union", slog.String("type", fmt.Sprintf("%T", obj.Term(i).Type())), slog.String("ref", union.Ref.String()))
-								} else {
-									union.Types = append(union.Types, ref)
-								}
-
-							}
-
-							res = append(res, union)
 						}
 					}
 				}
@@ -203,50 +123,253 @@ func convertTypeDecl(pkgs []*packages.Package) []wdy.TypeDecl {
 		}
 	}
 
-	return res
+	return nil
 }
 
-func intoRef(typ types.Type) (wdy.TypeReference, bool) {
-	switch t := typ.(type) {
-	case *types.Basic:
-		return wdy.TypeReference{
-			Path: "",
-			Name: t.Name(),
-		}, true
-	case *types.Named:
-		var path string
-		if t.Obj().Pkg() != nil {
-			path = t.Obj().Pkg().Path() // e.g. error is no basic type but in universe
+func (p *Program) getOrInstallFile(pkg *wdl.Package, fname string) *wdl.File {
+	for _, file := range pkg.Files() {
+		if file.Path() == fname {
+			return file
 		}
-		return wdy.TypeReference{
-			Path: path,
-			Name: t.Obj().Name(),
-		}, true
-	case *types.Slice:
-		tp, ok := intoRef(t.Elem())
-		if !ok {
-			return wdy.TypeReference{}, false
-		}
-		return wdy.TypeReference{
-			Path:     "",
-			Name:     "[]",
-			TypeArgs: []wdy.TypeReference{tp},
-		}, true
-	case *types.Map:
-		key, ok := intoRef(t.Key())
-		if !ok {
-			return wdy.TypeReference{}, false
-		}
-		val, ok := intoRef(t.Elem())
-		if !ok {
-			return wdy.TypeReference{}, false
-		}
-		return wdy.TypeReference{
-			Path:     "",
-			Name:     "map",
-			TypeArgs: []wdy.TypeReference{key, val},
-		}, true
-	default:
-		return wdy.TypeReference{}, false
 	}
+
+	f := wdl.NewFile(func(file *wdl.File) {
+		file.SetName(filepath.Base(fname))
+		file.SetPath(filepath.Dir(fname))
+	})
+	pkg.AddFiles(f)
+
+	return f
+}
+
+// getTypeDef inserts (if not yet available) the denoted wdl type and returns it.
+func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, error) {
+	// check short-circuit definition
+	if def, ok := pg.TypeDef(ref); ok {
+		return def, nil
+	}
+
+	// treat as new package and/or type
+	var srcPkg *packages.Package
+	for _, pkg := range p.Pkgs {
+		if pkg.PkgPath == string(ref.Qualifier) {
+			srcPkg = pkg
+			break
+		}
+	}
+
+	if srcPkg == nil {
+		return nil, fmt.Errorf("cannot find type def in package %s", ref.Qualifier)
+	}
+
+	dstPkg, err := p.getOrInstallPackage(ref.Qualifier)
+	if err != nil {
+		return nil, err
+	}
+
+	for ident, object := range srcPkg.TypesInfo.Defs {
+
+		if object == nil {
+			continue
+		}
+
+		if ident.Name != string(ref.Name) {
+			continue
+		}
+
+		pos := srcPkg.Fset.Position(object.Pos())
+		file := p.getOrInstallFile(dstPkg, pos.Filename)
+
+		switch obj := object.Type().(type) {
+		case *types.Named:
+			name := obj.Obj().Name()
+			switch obj := obj.Underlying().(type) {
+			case *types.Interface:
+				// TODO how to distinguish between different use case of a Go interface (type constraint, actually an polymorphic interface etc)
+				iface := wdl.NewInterface(func(iface *wdl.Interface) {
+					// intentionally add first so that recursion can finish
+					dstPkg.AddTypeDefs(iface)
+					iface.SetPkg(dstPkg)
+					file.AddTypeDefs(iface)
+
+					iface.SetName(wdl.Identifier(name))
+					if comment := dstPkg.TypeComments()[iface.Name()]; comment != nil {
+						iface.SetComment(comment.Lines())
+						iface.SetMacros(comment.Macros())
+					}
+				})
+
+				if obj.NumMethods() > 0 {
+
+					var methods []*wdl.Func
+					//conventional interface methods
+					for i := 0; i < obj.NumMethods(); i++ {
+						method := obj.Method(i)
+						if signature, ok := method.Type().(*types.Signature); ok {
+							_ = signature //TODO
+						}
+						methods = append(methods, wdl.NewFunc(func(fn *wdl.Func) {
+
+							fn.SetName(wdl.Identifier(method.Name()))
+							// TODO this is not possible for iface methods and even wrong for global funcs
+							if comment := dstPkg.TypeComments()[fn.Name()]; comment != nil {
+								fn.SetComment(comment.Lines())
+								fn.SetMacros(comment.Macros())
+							}
+						}))
+					}
+
+					return iface, nil
+				}
+
+				for i := 0; i < obj.NumEmbeddeds(); i++ {
+					switch obj := obj.EmbeddedType(i).(type) {
+					case *types.Union:
+						// we are a union type definition
+						union := wdl.NewUnion(func(union *wdl.Union) {
+							// intentionally add first so that recursion can finish
+							dstPkg.AddTypeDefs(union)
+							union.SetPkg(dstPkg)
+							file.AddTypeDefs(union)
+							union.SetFile(file)
+
+							union.SetName(wdl.Identifier(name))
+							if comment := dstPkg.TypeComments()[union.Name()]; comment != nil {
+								union.SetComment(comment.Lines())
+								union.SetMacros(comment.Macros())
+							}
+
+							for i := 0; i < obj.Len(); i++ {
+								ref, err := p.createRef(obj.Term(i).Type())
+								if err != nil {
+									slog.Error("error creating ref for embedded type", "type", obj.Term(i).Type())
+									continue
+								}
+
+								tdef, err := p.getTypeDef(p.Program, ref)
+								if err != nil {
+									slog.Error("unsupported term type in union", slog.String("type", fmt.Sprintf("%T", obj.Term(i).Type())), slog.String("ref", string(union.Name())))
+								} else {
+									if tdef != nil {
+										union.AddTypes(tdef.AsResolvedType())
+									}
+								}
+
+							}
+						})
+
+						return union, nil
+					}
+				}
+			case *types.Struct:
+				return wdl.NewStruct(func(strct *wdl.Struct) {
+					strct.SetName(wdl.Identifier(name))
+					dstPkg.AddTypeDefs(strct)
+					strct.SetPkg(dstPkg)
+					file.AddTypeDefs(strct)
+
+					if comment := dstPkg.TypeComments()[strct.Name()]; comment != nil {
+						strct.SetComment(comment.Lines())
+						strct.SetMacros(comment.Macros())
+					}
+
+					for fidx := range obj.NumFields() {
+						f := obj.Field(fidx)
+						strct.AddFields(wdl.NewField(func(field *wdl.Field) {
+							field.SetName(wdl.Identifier(f.Name()))
+							ref, err := p.createRef(f.Type())
+							if err != nil {
+								slog.Error("error creating ref for field type", "type", f.Type())
+								return
+							}
+							ftype, err := p.getTypeDef(p.Program, ref)
+							if err != nil {
+								slog.Error("error getting def for field type", "type", f.Type())
+								return
+							}
+
+							if ftype == nil {
+								slog.Error("oops with nil type for field type", "type", f.Type())
+								return
+							}
+
+							field.SetTypeDef(ftype.AsResolvedType())
+						}))
+					}
+
+				}), nil
+			default:
+				slog.Error(fmt.Sprintf("named type not implemented %T", obj))
+			}
+		}
+	}
+
+	slog.Error(fmt.Sprintf("cannot convert def in package %v", ref))
+
+	return nil, nil
+}
+
+func (p *Program) createRef(typ types.Type) (*wdl.TypeRef, error) {
+	switch t := typ.(type) {
+	case *types.Named:
+		return &wdl.TypeRef{
+			Qualifier: wdl.PkgImportQualifier(t.Obj().Pkg().Path()),
+			Name:      wdl.Identifier(t.Obj().Name()),
+		}, nil
+
+	}
+
+	return nil, fmt.Errorf("cannot create ref for type %s", typ)
+}
+
+// getPackage installs or returns the qualified package.
+func (p *Program) getOrInstallPackage(qualifier wdl.PkgImportQualifier) (*wdl.Package, error) {
+	res, ok := p.Program.PackageByPath(qualifier)
+	if ok {
+		return res, nil
+	}
+
+	for _, pkg := range p.Pkgs {
+		if pkg.PkgPath == string(qualifier) {
+			identComments, err := makeIdentComments(pkg)
+			if err != nil {
+				return nil, err
+			}
+
+			res = wdl.NewPackage(func(npkg *wdl.Package) {
+				npkg.SetTypeComments(identComments)
+				npkg.SetName(wdl.Identifier(pkg.Name))
+				npkg.SetQualifier(wdl.PkgImportQualifier(pkg.PkgPath))
+			})
+
+			for _, syntax := range pkg.Syntax {
+				if syntax.Doc != nil {
+					pkgLevelDoc, err := makeComment(pkg, syntax.Doc)
+					if err != nil {
+						return nil, err
+					}
+
+					if res.Comment() == nil {
+						res.SetComment(pkgLevelDoc)
+					} else {
+						res.Comment().AddMacros(pkgLevelDoc.Macros()...)
+						res.Comment().AddLines(pkgLevelDoc.Lines()...)
+					}
+				}
+			}
+
+			break
+		}
+	}
+
+	if res == nil {
+		return nil, fmt.Errorf("no such package: %s", qualifier)
+	}
+
+	p.Program.AddPackage(res)
+	return res, nil
+}
+
+func ast2Pos(position token.Position) wdl.Pos {
+	return wdl.NewPos(position.Filename, position.Line)
 }

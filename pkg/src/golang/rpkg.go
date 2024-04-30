@@ -38,6 +38,10 @@ func (r *Renderer) renderPkg(pkg *ast.Pkg) ([]*render.File, error) {
 	for _, file := range pkg.PkgFiles {
 		buf, err := r.renderFile(file)
 
+		if err != nil {
+			fmt.Println(string(buf))
+		}
+
 		f := &render.File{
 			FileName: file.Name,
 			MimeType: MimeTypeGo,
