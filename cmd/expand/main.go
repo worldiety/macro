@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/worldiety/macro/ast/golang"
 	"github.com/worldiety/macro/pkg/wdl/macro"
+	"github.com/worldiety/macro/pkg/wdl/parser/golang"
 	"log"
 	"log/slog"
 	"os"

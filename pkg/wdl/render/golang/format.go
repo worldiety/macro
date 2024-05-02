@@ -1,7 +1,7 @@
 package golang
 
 import (
-	"github.com/worldiety/macro/pkg/src/render"
+	"fmt"
 	"go/format"
 	"strings"
 	"unicode"
@@ -12,7 +12,7 @@ import (
 func Format(source []byte) ([]byte, error) {
 	buf, err := format.Source(source)
 	if err != nil {
-		return []byte(render.WithLineNumbers(string(source))), err
+		return []byte(WithLineNumbers(string(source))), err
 	}
 
 	return buf, nil
@@ -85,5 +85,14 @@ func MakeIdentifier(str string) string {
 		return "_"
 	}
 
+	return sb.String()
+}
+
+// WithLineNumbers puts a 1 based line number to the left and returns the text.
+func WithLineNumbers(text string) string {
+	sb := &strings.Builder{}
+	for i, line := range strings.Split(text, "\n") {
+		sb.WriteString(fmt.Sprintf("%4d: %s\n", i+1, line))
+	}
 	return sb.String()
 }
