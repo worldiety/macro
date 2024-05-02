@@ -1,6 +1,7 @@
 package golang
 
 import (
+	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render"
 	"strconv"
@@ -17,12 +18,19 @@ func NewRFile(parent *Renderer, pkg wdl.PkgImportQualifier) *RFile {
 }
 
 func (r *RFile) Use(rtype *wdl.ResolvedType) *wdl.ResolvedType {
+	if rtype.Pkg() == nil {
+		panic(fmt.Errorf("type %#v has empty package", rtype))
+	}
 	if rtype.Pkg().Qualifier() == r.selfImportPath || rtype.Pkg().Qualifier() == "std" {
 		return rtype
 	}
 
 	r.namedImports[rtype.Pkg().Name()] = rtype.Pkg().Qualifier() // todo this is wrong for collisions on name but different paths
 	return rtype
+}
+
+func (r *RFile) AddImport(pkgName wdl.Identifier, path wdl.PkgImportQualifier) {
+	r.namedImports[pkgName] = path
 }
 
 // RenderFile generates the code for the entire file.
@@ -52,8 +60,16 @@ func (r *Renderer) RenderFile(file *wdl.File) ([]byte, error) {
 	}
 
 	if len(rFile.namedImports) > 0 {
+		tmpImports := make(map[wdl.Identifier]wdl.PkgImportQualifier)
+		for identifier, qualifier := range rFile.namedImports {
+			tmpImports[identifier] = qualifier
+		}
+		for identifier, qualifier := range file.Imports() {
+			tmpImports[identifier] = qualifier
+		}
+
 		w.Printf("import (\n")
-		for namedImport, qualifier := range rFile.namedImports {
+		for namedImport, qualifier := range tmpImports {
 			w.Printf("  %s %s\n", namedImport, strconv.Quote(string(qualifier)))
 		}
 

@@ -71,9 +71,22 @@ type Func struct {
 	comment    []*CommentLine
 	args       []*Param
 	results    []*Param
+	typeParams []*Param
 	receiver   *Param
 	visibility Visibility
 	body       *Block
+}
+
+func (f *Func) TypeParams() []*Param {
+	return f.typeParams
+}
+
+func (f *Func) SetTypeParams(typeParams []*Param) {
+	f.typeParams = typeParams
+}
+
+func (f *Func) AddTypeParams(typeParams ...*Param) {
+	f.typeParams = append(f.typeParams, typeParams...)
 }
 
 func (f *Func) Pkg() *Package {

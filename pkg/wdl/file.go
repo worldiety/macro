@@ -14,6 +14,11 @@ type File struct {
 	pkg      *Package
 	path     string
 	modified bool
+	imports  map[Identifier]PkgImportQualifier
+}
+
+func (f *File) Imports() map[Identifier]PkgImportQualifier {
+	return f.imports
 }
 
 func (f *File) Modified() bool {
@@ -49,12 +54,16 @@ func (f *File) SetPkg(pkg *Package) {
 }
 
 func NewFile(with func(file *File)) *File {
-	f := &File{}
+	f := &File{imports: map[Identifier]PkgImportQualifier{}}
 	if with != nil {
 		with(f)
 	}
 
 	return f
+}
+
+func (f *File) AddImport(identifier Identifier, qualifier PkgImportQualifier) {
+	f.imports[identifier] = qualifier
 }
 
 func (f *File) Preamble() *Comment {

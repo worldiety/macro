@@ -14,6 +14,19 @@ func (r *RFile) renderFunc(f *wdl.Func, w *render.Writer) error {
 	// func name
 	w.Print(goAccessorName(f))
 
+	// type params/generics
+	if len(f.TypeParams()) > 0 {
+		w.Print("[")
+		for _, param := range f.TypeParams() {
+			if param.Name() != "" {
+				w.Printf("%s ", param.Name())
+			}
+			w.Print(r.GoType(param.TypeDef()))
+			w.Print(",")
+		}
+		w.Print("]")
+	}
+
 	// func params
 	w.Printf("(")
 	for _, param := range f.Args() {
@@ -32,7 +45,10 @@ func (r *RFile) renderFunc(f *wdl.Func, w *render.Writer) error {
 			if param.Name() != "" {
 				w.Printf("%s ", param.Name())
 			}
-			w.Print(r.GoType(param.TypeDef()))
+			if param.TypeDef() != nil {
+				// non generic
+				w.Print(r.GoType(param.TypeDef()))
+			}
 			w.Print(",")
 		}
 		w.Printf(")")

@@ -31,6 +31,11 @@ func NewProgram(with func(program *Program)) *Program {
 			}),
 			NewBaseType(func(bt *BaseType) {
 				bt.SetPkg(p)
+				bt.SetName("byte")
+				bt.SetKind(TByte)
+			}),
+			NewBaseType(func(bt *BaseType) {
+				bt.SetPkg(p)
 				bt.SetName("any")
 				bt.SetKind(TAny)
 			}),
@@ -38,6 +43,14 @@ func NewProgram(with func(program *Program)) *Program {
 				bt.SetPkg(p)
 				bt.SetName("bool")
 				bt.SetKind(TBool)
+			}),
+			NewInterface(func(iface *Interface) {
+				iface.SetPkg(p)
+				iface.SetName("error")
+			}),
+			NewStruct(func(strct *Struct) {
+				strct.SetPkg(p)
+				strct.SetName("Slice")
 			}),
 		)
 	}))

@@ -3,7 +3,9 @@
 package domain
 
 import (
+	json "encoding/json"
 	xcompo "example/domain/xcompo"
+	fmt "fmt"
 )
 
 // A Component is a sum type or tagged union.
@@ -15,6 +17,10 @@ type Component struct {
 
 func (e Component) Unwrap() any {
 	return e.value
+}
+
+func (e Component) Ordinal() int {
+	return e.ordinal
 }
 
 func (e Component) Valid() bool {
@@ -109,4 +115,78 @@ func (e Component) WithIcon(v xcompo.Icon) Component {
 	e.ordinal = 4
 	e.value = v
 	return e
+}
+
+func (e Component) MarshalJSON() ([]byte, error) {
+	if e.ordinal == 0 {
+		return nil, fmt.Errorf("marshalling a zero value is not allowed")
+	}
+
+	return json.Marshal(e)
+}
+
+func (e *Component) UnmarshalJSON(bytes []byte) error {
+	typeOnly := struct {
+		Type string `json:"type"`
+	}{}
+	if err := json.Unmarshal(bytes, &typeOnly); err != nil {
+		return err
+	}
+	switch typeOnly.Type {
+	case "Button":
+		var value Button
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Button'")
+		}
+		e.ordinal = 1
+	case "TextField":
+		var value TextField
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'TextField'")
+		}
+		e.ordinal = 2
+	case "RichText":
+		var value xcompo.RichText
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'xcompo.RichText'")
+		}
+		e.ordinal = 3
+	case "Icon":
+		var value xcompo.Icon
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'xcompo.Icon'")
+		}
+		e.ordinal = 4
+	default:
+		return fmt.Errorf("unknown type variant name '%s'", typeOnly.Type)
+	}
+
+	return nil
+}
+
+func MatchComponent[R any](e Component, onButton func(Button) R, onTextField func(TextField) R, onRichText func(xcompo.RichText) R, onIcon func(xcompo.Icon) R, _onDefault func(any) R) R {
+	if _onDefault == nil {
+		panic(`missing default match: cannot guarantee exhaustive matching`)
+	}
+
+	switch e.ordinal {
+	case 1:
+		if onButton != nil {
+			return onButton(e.value.(Button))
+		}
+	case 2:
+		if onTextField != nil {
+			return onTextField(e.value.(TextField))
+		}
+	case 3:
+		if onRichText != nil {
+			return onRichText(e.value.(xcompo.RichText))
+		}
+	case 4:
+		if onIcon != nil {
+			return onIcon(e.value.(xcompo.Icon))
+		}
+	}
+
+	return _onDefault(e.value)
 }

@@ -5,6 +5,7 @@ type Kind int
 const (
 	TString Kind = iota + 1
 	TInt
+	TByte
 	TAny
 	TBool
 )

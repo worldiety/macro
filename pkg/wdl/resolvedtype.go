@@ -41,6 +41,10 @@ func (r *ResolvedType) SetParams(params []*ResolvedType) {
 	r.params = params
 }
 
+func (r *ResolvedType) AddParams(params ...*ResolvedType) {
+	r.params = append(r.params, params...)
+}
+
 func (r *ResolvedType) Pointer() bool {
 	return r.pointer
 }
