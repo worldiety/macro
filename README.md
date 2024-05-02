@@ -37,6 +37,8 @@ Execute the generator as follows to let a `component.gen.go` file be generated a
 go run github.com/worldiety/macro/cmd/expand@latest
 ```
 
+Take a look at the result at https://github.com/worldiety/macro/blob/main/testdata/example/domain/component.gen.go
+
 ### Config options
 Currently, only the following macro invocation is possible:
 
