@@ -48,7 +48,7 @@ func (r *RFile) GoType(rtype *wdl.ResolvedType) string {
 				return ptr + "error"
 			case "Slice":
 				if len(rtype.Params()) != 1 {
-					panic(fmt.Errorf("invalid Slice type param: %v", rtype.Params()))
+					panic(fmt.Errorf("invalid Slice type param: %#v", rtype))
 				}
 				return ptr + "[]" + r.GoType(rtype.Params()[0])
 			}

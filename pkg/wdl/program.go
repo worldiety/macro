@@ -31,6 +31,16 @@ func NewProgram(with func(program *Program)) *Program {
 			}),
 			NewBaseType(func(bt *BaseType) {
 				bt.SetPkg(p)
+				bt.SetName("int32")
+				bt.SetKind(TInt32)
+			}),
+			NewBaseType(func(bt *BaseType) {
+				bt.SetPkg(p)
+				bt.SetName("int64")
+				bt.SetKind(TInt64)
+			}),
+			NewBaseType(func(bt *BaseType) {
+				bt.SetPkg(p)
 				bt.SetName("byte")
 				bt.SetKind(TByte)
 			}),

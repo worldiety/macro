@@ -28,7 +28,7 @@ func (e Component) Valid() bool {
 }
 
 // Switch provides an exhaustive and type safe closure callback mechanic. Nil callbacks are allowed. Unmatched branches are delegated into a default case.
-func (e Component) Switch(onButton func(Button), onTextField func(TextField), onRichText func(xcompo.RichText), onIcon func(xcompo.Icon), _onDefault func(any)) {
+func (e Component) Switch(onButton func(Button), onTextField func(TextField), onText func(Text), onChapter func(Chapter), onRichText func(xcompo.RichText), onIcon func(xcompo.Icon), onstring func(string), onstringSlice func([]string), onTextSlice func([]Text), _onDefault func(any)) {
 	switch e.ordinal {
 	case 1:
 		if onButton != nil {
@@ -41,13 +41,38 @@ func (e Component) Switch(onButton func(Button), onTextField func(TextField), on
 			return
 		}
 	case 3:
+		if onText != nil {
+			onText(e.value.(Text))
+			return
+		}
+	case 4:
+		if onChapter != nil {
+			onChapter(e.value.(Chapter))
+			return
+		}
+	case 5:
 		if onRichText != nil {
 			onRichText(e.value.(xcompo.RichText))
 			return
 		}
-	case 4:
+	case 6:
 		if onIcon != nil {
 			onIcon(e.value.(xcompo.Icon))
+			return
+		}
+	case 7:
+		if onstring != nil {
+			onstring(e.value.(string))
+			return
+		}
+	case 8:
+		if onstringSlice != nil {
+			onstringSlice(e.value.([]string))
+			return
+		}
+	case 9:
+		if onTextSlice != nil {
+			onTextSlice(e.value.([]Text))
 			return
 		}
 	}
@@ -87,9 +112,39 @@ func (e Component) WithTextField(v TextField) Component {
 	return e
 }
 
+func (e Component) AsText() (Text, bool) {
+	var zero Text
+	if e.ordinal == 3 {
+		return e.value.(Text), true
+	}
+
+	return zero, false
+}
+
+func (e Component) WithText(v Text) Component {
+	e.ordinal = 3
+	e.value = v
+	return e
+}
+
+func (e Component) AsChapter() (Chapter, bool) {
+	var zero Chapter
+	if e.ordinal == 4 {
+		return e.value.(Chapter), true
+	}
+
+	return zero, false
+}
+
+func (e Component) WithChapter(v Chapter) Component {
+	e.ordinal = 4
+	e.value = v
+	return e
+}
+
 func (e Component) AsRichText() (xcompo.RichText, bool) {
 	var zero xcompo.RichText
-	if e.ordinal == 3 {
+	if e.ordinal == 5 {
 		return e.value.(xcompo.RichText), true
 	}
 
@@ -97,14 +152,14 @@ func (e Component) AsRichText() (xcompo.RichText, bool) {
 }
 
 func (e Component) WithRichText(v xcompo.RichText) Component {
-	e.ordinal = 3
+	e.ordinal = 5
 	e.value = v
 	return e
 }
 
 func (e Component) AsIcon() (xcompo.Icon, bool) {
 	var zero xcompo.Icon
-	if e.ordinal == 4 {
+	if e.ordinal == 6 {
 		return e.value.(xcompo.Icon), true
 	}
 
@@ -112,7 +167,52 @@ func (e Component) AsIcon() (xcompo.Icon, bool) {
 }
 
 func (e Component) WithIcon(v xcompo.Icon) Component {
-	e.ordinal = 4
+	e.ordinal = 6
+	e.value = v
+	return e
+}
+
+func (e Component) Asstring() (string, bool) {
+	var zero string
+	if e.ordinal == 7 {
+		return e.value.(string), true
+	}
+
+	return zero, false
+}
+
+func (e Component) Withstring(v string) Component {
+	e.ordinal = 7
+	e.value = v
+	return e
+}
+
+func (e Component) AsstringSlice() ([]string, bool) {
+	var zero []string
+	if e.ordinal == 8 {
+		return e.value.([]string), true
+	}
+
+	return zero, false
+}
+
+func (e Component) WithstringSlice(v []string) Component {
+	e.ordinal = 8
+	e.value = v
+	return e
+}
+
+func (e Component) AsTextSlice() ([]Text, bool) {
+	var zero []Text
+	if e.ordinal == 9 {
+		return e.value.([]Text), true
+	}
+
+	return zero, false
+}
+
+func (e Component) WithTextSlice(v []Text) Component {
+	e.ordinal = 9
 	e.value = v
 	return e
 }
@@ -145,18 +245,48 @@ func (e *Component) UnmarshalJSON(bytes []byte) error {
 			return fmt.Errorf("cannot unmarshal variant 'TextField'")
 		}
 		e.ordinal = 2
+	case "Text":
+		var value Text
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Text'")
+		}
+		e.ordinal = 3
+	case "Chapter":
+		var value Chapter
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Chapter'")
+		}
+		e.ordinal = 4
 	case "RichText":
 		var value xcompo.RichText
 		if err := json.Unmarshal(bytes, &value); err != nil {
 			return fmt.Errorf("cannot unmarshal variant 'xcompo.RichText'")
 		}
-		e.ordinal = 3
+		e.ordinal = 5
 	case "Icon":
 		var value xcompo.Icon
 		if err := json.Unmarshal(bytes, &value); err != nil {
 			return fmt.Errorf("cannot unmarshal variant 'xcompo.Icon'")
 		}
-		e.ordinal = 4
+		e.ordinal = 6
+	case "string":
+		var value string
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'string'")
+		}
+		e.ordinal = 7
+	case "stringSlice":
+		var value []string
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant '[]string'")
+		}
+		e.ordinal = 8
+	case "TextSlice":
+		var value []Text
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant '[]Text'")
+		}
+		e.ordinal = 9
 	default:
 		return fmt.Errorf("unknown type variant name '%s'", typeOnly.Type)
 	}
@@ -164,7 +294,7 @@ func (e *Component) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-func MatchComponent[R any](e Component, onButton func(Button) R, onTextField func(TextField) R, onRichText func(xcompo.RichText) R, onIcon func(xcompo.Icon) R, _onDefault func(any) R) R {
+func MatchComponent[R any](e Component, onButton func(Button) R, onTextField func(TextField) R, onText func(Text) R, onChapter func(Chapter) R, onRichText func(xcompo.RichText) R, onIcon func(xcompo.Icon) R, onstring func(string) R, onstringSlice func([]string) R, onTextSlice func([]Text) R, _onDefault func(any) R) R {
 	if _onDefault == nil {
 		panic(`missing default match: cannot guarantee exhaustive matching`)
 	}
@@ -179,12 +309,32 @@ func MatchComponent[R any](e Component, onButton func(Button) R, onTextField fun
 			return onTextField(e.value.(TextField))
 		}
 	case 3:
+		if onText != nil {
+			return onText(e.value.(Text))
+		}
+	case 4:
+		if onChapter != nil {
+			return onChapter(e.value.(Chapter))
+		}
+	case 5:
 		if onRichText != nil {
 			return onRichText(e.value.(xcompo.RichText))
 		}
-	case 4:
+	case 6:
 		if onIcon != nil {
 			return onIcon(e.value.(xcompo.Icon))
+		}
+	case 7:
+		if onstring != nil {
+			return onstring(e.value.(string))
+		}
+	case 8:
+		if onstringSlice != nil {
+			return onstringSlice(e.value.([]string))
+		}
+	case 9:
+		if onTextSlice != nil {
+			return onTextSlice(e.value.([]Text))
 		}
 	}
 

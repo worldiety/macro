@@ -144,6 +144,23 @@ func (p *Program) getOrInstallFile(pkg *wdl.Package, fname string) *wdl.File {
 
 // getTypeDef inserts (if not yet available) the denoted wdl type and returns it.
 func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, error) {
+	if ref.Qualifier == "std" {
+		switch ref.Name {
+		case "Slice":
+			orig := p.Program.MustResolveSimple("std", "Slice")
+			clone := wdl.NewStruct(func(strct *wdl.Struct) {
+				strct.SetPkg(orig.Pkg())
+				strct.SetName("Slice")
+			})
+			tp, err := p.getTypeDef(p.Program, ref.Params[0])
+			if err != nil {
+				return nil, err
+			}
+			clone.AddTypeParams(tp.AsResolvedType())
+			return clone, nil
+		}
+	}
+
 	// check short-circuit definition
 	if def, ok := pg.TypeDef(ref); ok {
 		return def, nil
@@ -242,13 +259,13 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 							for i := 0; i < obj.Len(); i++ {
 								ref, err := p.createRef(obj.Term(i).Type())
 								if err != nil {
-									slog.Error("error creating ref for embedded type", "type", obj.Term(i).Type())
+									slog.Error("union: error creating ref", "type", obj.Term(i).Type())
 									continue
 								}
 
 								tdef, err := p.getTypeDef(p.Program, ref)
 								if err != nil {
-									slog.Error("unsupported term type in union", slog.String("type", fmt.Sprintf("%T", obj.Term(i).Type())), slog.String("ref", string(union.Name())))
+									slog.Error("union: unsupported term type", slog.String("type", fmt.Sprintf("%T", obj.Term(i).Type())), slog.String("ref", string(union.Name())))
 								} else {
 									if tdef != nil {
 										union.AddTypes(tdef.AsResolvedType())
@@ -298,6 +315,30 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 					}
 
 				}), nil
+			case *types.Basic:
+				switch obj.Kind() {
+				case types.Bool:
+					return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+						dType.SetName(wdl.Identifier(name))
+						dstPkg.AddTypeDefs(dType)
+						dType.SetPkg(dstPkg)
+						dType.SetUnderlying(p.Program.MustResolveSimple("std", "bool").TypeDef())
+					}), nil
+				case types.String:
+					return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+						dType.SetName(wdl.Identifier(name))
+						dstPkg.AddTypeDefs(dType)
+						dType.SetPkg(dstPkg)
+						dType.SetUnderlying(p.Program.MustResolveSimple("std", "string").TypeDef())
+					}), nil
+				case types.Int:
+					return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+						dType.SetName(wdl.Identifier(name))
+						dstPkg.AddTypeDefs(dType)
+						dType.SetPkg(dstPkg)
+						dType.SetUnderlying(p.Program.MustResolveSimple("std", "int").TypeDef())
+					}), nil
+				}
 			default:
 				slog.Error(fmt.Sprintf("named type not implemented %T", obj))
 			}
@@ -316,7 +357,29 @@ func (p *Program) createRef(typ types.Type) (*wdl.TypeRef, error) {
 			Qualifier: wdl.PkgImportQualifier(t.Obj().Pkg().Path()),
 			Name:      wdl.Identifier(t.Obj().Name()),
 		}, nil
+	case *types.Pointer:
+		ref, err := p.createRef(t.Elem())
+		if err != nil {
+			return nil, err
+		}
 
+		ref.Pointer = true
+		return ref, nil
+	case *types.Slice:
+		ref, err := p.createRef(t.Elem())
+		if err != nil {
+			return nil, err
+		}
+		slice := p.Program.MustResolveSimple("std", "Slice").AsTypeRef()
+		slice.Params = append(slice.Params, ref)
+		return slice, nil
+	case *types.Basic:
+		switch t.Kind() {
+		case types.Bool:
+			return p.Program.MustResolveSimple("std", "bool").AsTypeRef(), nil
+		case types.String:
+			return p.Program.MustResolveSimple("std", "string").AsTypeRef(), nil
+		}
 	}
 
 	return nil, fmt.Errorf("cannot create ref for type %s", typ)

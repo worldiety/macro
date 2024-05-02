@@ -1,5 +1,7 @@
 package wdl
 
+import "slices"
+
 type Visibility int
 
 const (
@@ -50,11 +52,24 @@ type Struct struct {
 	pkg        *Package
 	macros     []*MacroInvocation
 	comment    []*CommentLine
-	types      []*ResolvedType
+	types      []*ResolvedType // composition?
 	name       Identifier
 	fields     []*Field
 	methods    []*Func
 	visibility Visibility
+	typeParams []*ResolvedType
+}
+
+func (s *Struct) TypeParams() []*ResolvedType {
+	return s.typeParams
+}
+
+func (s *Struct) SetTypeParams(typeParams []*ResolvedType) {
+	s.typeParams = typeParams
+}
+
+func (s *Struct) AddTypeParams(typeParams ...*ResolvedType) {
+	s.typeParams = append(s.typeParams, typeParams...)
 }
 
 func (s *Struct) Visibility() Visibility {
@@ -145,5 +160,6 @@ func (s *Struct) AsResolvedType() *ResolvedType {
 		rType.SetName(s.name)
 		rType.SetPkg(s.pkg)
 		rType.SetTypeDef(s)
+		rType.SetParams(slices.Clone(s.TypeParams()))
 	})
 }

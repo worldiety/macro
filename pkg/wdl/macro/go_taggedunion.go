@@ -120,7 +120,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 				for _, resolvedType := range union.Types() {
 					fn.AddArgs(
 						wdl.NewParam(func(param *wdl.Param) {
-							param.SetName("on" + resolvedType.Name())
+							param.SetName("on" + identFrom(resolvedType))
 							param.SetTypeDef(wdl.NewFunc(func(fn *wdl.Func) {
 								fn.SetPkg(union.Pkg())
 								fn.AddArgs(wdl.NewParam(func(param *wdl.Param) {
@@ -149,8 +149,8 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 						gtype := rtmp.GoType(resolvedType)
 
 						tmp += fmt.Sprintf("case %d:\n", ord)
-						tmp += fmt.Sprintf("if on%s !=nil {\n", resolvedType.Name())
-						tmp += fmt.Sprintf("on%s(e.value.(%s))\nreturn\n", resolvedType.Name(), gtype)
+						tmp += fmt.Sprintf("if on%s !=nil {\n", identFrom(resolvedType))
+						tmp += fmt.Sprintf("on%s(e.value.(%s))\nreturn\n", identFrom(resolvedType), gtype)
 						tmp += fmt.Sprintf("}\n")
 					}
 					tmp += "}\n"
@@ -170,7 +170,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 						r.SetTypeDef(strct.AsResolvedType())
 					}))
 					fn.SetVisibility(wdl.Public)
-					fn.SetName("as" + resolvedType.Name())
+					fn.SetName("as" + identFrom(resolvedType))
 					fn.AddResults(
 						wdl.NewParam(func(param *wdl.Param) {
 							param.SetTypeDef(resolvedType)
@@ -191,7 +191,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 						r.SetTypeDef(strct.AsResolvedType())
 					}))
 					fn.SetVisibility(wdl.Public)
-					fn.SetName("with" + resolvedType.Name())
+					fn.SetName("with" + identFrom(resolvedType))
 					fn.AddArgs(wdl.NewParam(func(param *wdl.Param) {
 						param.SetTypeDef(resolvedType)
 						param.SetName("v")
@@ -243,7 +243,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 			for _, resolvedType := range union.Types() {
 				fn.AddArgs(
 					wdl.NewParam(func(param *wdl.Param) {
-						param.SetName("on" + resolvedType.Name())
+						param.SetName("on" + identFrom(resolvedType))
 						param.SetTypeDef(wdl.NewFunc(func(fn *wdl.Func) {
 							fn.SetPkg(union.Pkg())
 							fn.AddArgs(wdl.NewParam(func(param *wdl.Param) {
@@ -278,8 +278,8 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 					gtype := rtmp.GoType(resolvedType)
 
 					tmp += fmt.Sprintf("case %d:\n", ord)
-					tmp += fmt.Sprintf("if on%s !=nil {\n", resolvedType.Name())
-					tmp += fmt.Sprintf("return on%s(e.value.(%s))\n", resolvedType.Name(), gtype)
+					tmp += fmt.Sprintf("if on%s !=nil {\n", identFrom(resolvedType))
+					tmp += fmt.Sprintf("return on%s(e.value.(%s))\n", identFrom(resolvedType), gtype)
 					tmp += fmt.Sprintf("}\n")
 				}
 				tmp += "}\n"
@@ -365,7 +365,7 @@ func (e *Engine) goTaggedUnionJSONInternallyTagged(union *wdl.Union, uStruct *wd
 					rtmp := golang.NewRFile(golang.NewRenderer(golang.Options{}), union.Pkg().Qualifier())
 					gtype := rtmp.GoType(resolvedType)
 
-					tmp += fmt.Sprintf("case \"%s\":\n", resolvedType.Name())
+					tmp += fmt.Sprintf("case \"%s\":\n", identFrom(resolvedType))
 					tmp += fmt.Sprintf("var value %s\n", gtype)
 					tmp += fmt.Sprintf("if err:=json.Unmarshal(bytes, &value);err !=nil {\n")
 					tmp += fmt.Sprintf("return fmt.Errorf(\"cannot unmarshal variant '%s'\")\n", gtype)
@@ -379,4 +379,16 @@ func (e *Engine) goTaggedUnionJSONInternallyTagged(union *wdl.Union, uStruct *wd
 			}))
 		}),
 	)
+}
+
+func identFrom(resolvedType *wdl.ResolvedType) wdl.Identifier {
+	if len(resolvedType.Params()) == 0 {
+		return resolvedType.Name()
+	}
+
+	var compoundName wdl.Identifier
+	for _, r := range resolvedType.Params() {
+		compoundName += r.Name()
+	}
+	return compoundName + resolvedType.Name()
 }

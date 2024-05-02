@@ -2,8 +2,53 @@
 Our macro package aggregates multiple internal little tools, which we want to try out.
 Some tools may have been proofed to be useful, for some we still collect usage reports and others are just here for archive or compatibility purposes.
 
+## FAQ
+
+### There are so many error logs
+Sorry, but the implementation is not (yet) complete.
+However, the result is often still acceptable.
+Try to switch to supported basic types and/or introduce distinct named types.
+
+### Where are the unit tests?
+They wait to get written by you.
+
 ## tagged union
 In the following FAQ we document our discussions about the tagged union macro.
+
+### Example
+
+Consider some source code like
+
+```go
+// A Component is a sum type or tagged union.
+// Actually, we can generate different flavors, so that Go makes fun for modelling business stuff.
+//
+// #[go.TaggedUnion "json":"intern", "tag":"type"]
+type _Component interface {
+	Button | TextField | Text | Chapter | xcompo.RichText | xcompo.Icon | string | []string | []Text
+}
+
+```
+
+Note the macro invocation.
+Execute the generator as follows to let a `component.gen.go` file be generated aside the file which contains the `_Component` definition:
+
+```bash
+go run github.com/worldiety/macro/cmd/expand@latest
+```
+
+### Config options
+Currently, only the following macro invocation is possible:
+
+```rust
+#[go.TaggedUnion "json":"intern", "tag":"type"]
+```
+
+which is the same as ommitting the options and resorting to the default settings
+
+```rust
+#[go.TaggedUnion]
+```
 
 ### Why choice types in Go, there are already interfaces?
 A choice type can be expressed in many ways.

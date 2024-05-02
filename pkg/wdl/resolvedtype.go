@@ -9,6 +9,13 @@ type ResolvedType struct {
 	pointer bool
 }
 
+func (r *ResolvedType) AsTypeRef() *TypeRef {
+	return &TypeRef{
+		Qualifier: r.pkg.Qualifier(),
+		Name:      r.Name(),
+	}
+}
+
 func (r *ResolvedType) Pkg() *Package {
 	return r.pkg
 }
