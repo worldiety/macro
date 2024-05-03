@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -39,6 +38,6 @@ func (z *Zeiterfassung) ZeitBuchen(user User, mitarbeiter Mitarbeiter, dauer tim
 		Dauer: dauer,
 		Text:  "gearbeitet",
 	})
-	fmt.Println("zeit gebucht", user.Audit)
+	//fmt.Println("zeit gebucht", user.Audit)
 	return nil
 }

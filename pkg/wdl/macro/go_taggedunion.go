@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render/golang"
+	"strconv"
 	"strings"
 )
 
@@ -16,6 +17,7 @@ const (
 type goTaggedUnionParams struct {
 	JSONRepresentation jsonRepr `json:"json"` // currently only "intern"
 	TagName            string   `json:"tag"`
+	Names              []string `json:"names"`
 }
 
 func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation) error {
@@ -39,6 +41,10 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 
 	if opts.JSONRepresentation == "" {
 		opts.JSONRepresentation = internallyTagged
+	}
+
+	if len(opts.Names) > 0 && len(opts.Names) != len(union.Types()) {
+		return fmt.Errorf("names and union types have different length: %d names vs %d types", len(opts.Names), len(union.Types()))
 	}
 
 	uStruct := wdl.NewStruct(func(strct *wdl.Struct) {
@@ -293,7 +299,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 
 	switch opts.JSONRepresentation {
 	case internallyTagged:
-		e.goTaggedUnionJSONInternallyTagged(union, uStruct, opts.TagName)
+		e.goTaggedUnionJSONInternallyTagged(opts, union, uStruct, opts.TagName)
 	default:
 		return fmt.Errorf("no such json tag variant supported: %s", opts.JSONRepresentation)
 	}
@@ -302,7 +308,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 }
 
 // see also https://serde.rs/enum-representations.html#internally-tagged
-func (e *Engine) goTaggedUnionJSONInternallyTagged(union *wdl.Union, uStruct *wdl.Struct, tagAttrName string) {
+func (e *Engine) goTaggedUnionJSONInternallyTagged(opts goTaggedUnionParams, union *wdl.Union, uStruct *wdl.Struct, tagAttrName string) {
 	uStruct.AddMethods(
 		wdl.NewFunc(func(fn *wdl.Func) {
 			fn.SetName("MarshalJSON")
@@ -324,9 +330,32 @@ func (e *Engine) goTaggedUnionJSONInternallyTagged(union *wdl.Union, uStruct *wd
 			fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
 				blk.AddStatements(
 					wdl.RawStmt("if e.ordinal == 0 {\nreturn nil, fmt.Errorf(\"marshalling a zero value is not allowed\")\n}\n\n"),
-					wdl.RawStmt("return json.Marshal(e)\n"),
+					wdl.RawStmt("// note, that by definition, this kind of encoding does not work with union types which evaluates to null, arrays or primitives.\n// Chose adjacent encoding instead.\n"),
+					wdl.RawStmt("buf,err:= json.Marshal(e.value)\n\tif err !=nil{\n\t\treturn nil,err\n\t}\nvar prefix []byte\n"),
 				)
+				tmp := "\nswitch e.ordinal {\n"
+				for idx, resolvedType := range union.Types() {
+					ord := idx + 1
+					strCaseConst := identFrom(resolvedType)
+					if len(opts.Names) > 0 {
+						strCaseConst = wdl.Identifier(opts.Names[idx])
+					}
+					tmp += fmt.Sprintf("case %d:\n", ord)
+					tmp += fmt.Sprintf("prefix = []byte(`{\"type\":%s`)\n", strconv.Quote(strCaseConst.String()))
+				}
+				tmp += "}\n"
+				blk.AddStatements(wdl.RawStmt(tmp))
+				blk.AddStatements(wdl.RawStmt(`
 
+if len(buf)>2{
+	// we expect an empty object like {} or at least an object with a single attribute, which requires a , separator
+	prefix=append(prefix,',')
+}
+buf= append(buf[1:], prefix...)
+	copy(buf[len(prefix):], buf)
+	copy(buf,prefix)
+
+	return buf,nil`))
 			}))
 		}),
 
@@ -365,12 +394,17 @@ func (e *Engine) goTaggedUnionJSONInternallyTagged(union *wdl.Union, uStruct *wd
 					rtmp := golang.NewRFile(golang.NewRenderer(golang.Options{}), union.Pkg().Qualifier())
 					gtype := rtmp.GoType(resolvedType)
 
-					tmp += fmt.Sprintf("case \"%s\":\n", identFrom(resolvedType))
+					strCaseConst := identFrom(resolvedType)
+					if len(opts.Names) > 0 {
+						strCaseConst = wdl.Identifier(opts.Names[idx])
+					}
+					tmp += fmt.Sprintf("case \"%s\":\n", strCaseConst)
 					tmp += fmt.Sprintf("var value %s\n", gtype)
 					tmp += fmt.Sprintf("if err:=json.Unmarshal(bytes, &value);err !=nil {\n")
 					tmp += fmt.Sprintf("return fmt.Errorf(\"cannot unmarshal variant '%s'\")\n", gtype)
 					tmp += fmt.Sprintf("}\n")
 					tmp += fmt.Sprintf("e.ordinal=%d\n", ord)
+					tmp += fmt.Sprintf("e.value=value\n")
 				}
 				tmp += "default:\nreturn fmt.Errorf(\"unknown type variant name '%s'\",typeOnly.Type)"
 				tmp += "}\n\nreturn nil\n"

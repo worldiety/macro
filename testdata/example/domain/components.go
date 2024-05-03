@@ -1,13 +1,11 @@
 package domain
 
-import "example/domain/xcompo"
-
 // A Component is a sum type or tagged union.
 // Actually, we can generate different flavors, so that Go makes fun for modelling business stuff.
 //
-// #[go.TaggedUnion "json":"intern", "tag":"type"]
+// #[go.TaggedUnion "json":"intern", "tag":"type", "names":["helloBtn","ATef","str","Chappy"]]
 type _Component interface {
-	Button | TextField | Text | Chapter | xcompo.RichText | xcompo.Icon | string | []string | []Text | map[int]Button
+	Button | TextField | Text | Chapter
 }
 
 type Blub error

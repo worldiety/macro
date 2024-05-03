@@ -4,6 +4,20 @@ Some tools may have been proofed to be useful, for some we still collect usage r
 
 ## FAQ
 
+### How to execute?
+
+Change the working directory to your go module and call the macro expander as follows:
+
+```bash
+go run github.com/worldiety/macro/cmd/expand@latest
+```
+
+Note, that go caches github aggressively, so ensure that you have the latest version, if new commits have arrived today:
+
+```bash
+GOPROXY=direct go run github.com/worldiety/macro/cmd/expand@latest
+```
+
 ### There are so many error logs
 Sorry, but the implementation is not (yet) complete.
 However, the result is often still acceptable.
@@ -33,20 +47,20 @@ type _Component interface {
 Note the macro invocation.
 Execute the generator as follows to let a `component.gen.go` file be generated aside the file which contains the `_Component` definition:
 
-```bash
-go run github.com/worldiety/macro/cmd/expand@latest
-```
-
 Take a look at the result at https://github.com/worldiety/macro/blob/main/testdata/example/domain/component.gen.go
 
 ### Config options
 Currently, only the following macro invocation is possible:
 
 ```rust
-#[go.TaggedUnion "json":"intern", "tag":"type"]
+#[go.TaggedUnion "json":"intern", "tag":"type", "names":[]]
 ```
 
-which is the same as ommitting the options and resorting to the default settings
+which is the same as ommitting the options and resorting to the default settings.
+
+Note, that the names attribute may contain a list of alternate serialization names.
+This is important for refactoring type names or just supporting names from external systems.
+The order and length of the names array must exactly match the union types order.
 
 ```rust
 #[go.TaggedUnion]
