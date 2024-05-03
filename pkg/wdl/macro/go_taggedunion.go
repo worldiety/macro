@@ -382,13 +382,14 @@ func (e *Engine) goTaggedUnionJSONInternallyTagged(union *wdl.Union, uStruct *wd
 }
 
 func identFrom(resolvedType *wdl.ResolvedType) wdl.Identifier {
+	rName := wdl.Identifier(golang.MakePublic(resolvedType.Name().String()))
 	if len(resolvedType.Params()) == 0 {
-		return resolvedType.Name()
+		return rName
 	}
 
 	var compoundName wdl.Identifier
 	for _, r := range resolvedType.Params() {
-		compoundName += r.Name()
+		compoundName += wdl.Identifier(golang.MakePublic(r.Name().String()))
 	}
-	return compoundName + resolvedType.Name()
+	return compoundName + rName
 }

@@ -28,7 +28,7 @@ func (e Component) Valid() bool {
 }
 
 // Switch provides an exhaustive and type safe closure callback mechanic. Nil callbacks are allowed. Unmatched branches are delegated into a default case.
-func (e Component) Switch(onButton func(Button), onTextField func(TextField), onText func(Text), onChapter func(Chapter), onRichText func(xcompo.RichText), onIcon func(xcompo.Icon), onstring func(string), onstringSlice func([]string), onTextSlice func([]Text), _onDefault func(any)) {
+func (e Component) Switch(onButton func(Button), onTextField func(TextField), onText func(Text), onChapter func(Chapter), onRichText func(xcompo.RichText), onIcon func(xcompo.Icon), onString func(string), onStringSlice func([]string), onTextSlice func([]Text), _onDefault func(any)) {
 	switch e.ordinal {
 	case 1:
 		if onButton != nil {
@@ -61,13 +61,13 @@ func (e Component) Switch(onButton func(Button), onTextField func(TextField), on
 			return
 		}
 	case 7:
-		if onstring != nil {
-			onstring(e.value.(string))
+		if onString != nil {
+			onString(e.value.(string))
 			return
 		}
 	case 8:
-		if onstringSlice != nil {
-			onstringSlice(e.value.([]string))
+		if onStringSlice != nil {
+			onStringSlice(e.value.([]string))
 			return
 		}
 	case 9:
@@ -172,7 +172,7 @@ func (e Component) WithIcon(v xcompo.Icon) Component {
 	return e
 }
 
-func (e Component) Asstring() (string, bool) {
+func (e Component) AsString() (string, bool) {
 	var zero string
 	if e.ordinal == 7 {
 		return e.value.(string), true
@@ -181,13 +181,13 @@ func (e Component) Asstring() (string, bool) {
 	return zero, false
 }
 
-func (e Component) Withstring(v string) Component {
+func (e Component) WithString(v string) Component {
 	e.ordinal = 7
 	e.value = v
 	return e
 }
 
-func (e Component) AsstringSlice() ([]string, bool) {
+func (e Component) AsStringSlice() ([]string, bool) {
 	var zero []string
 	if e.ordinal == 8 {
 		return e.value.([]string), true
@@ -196,7 +196,7 @@ func (e Component) AsstringSlice() ([]string, bool) {
 	return zero, false
 }
 
-func (e Component) WithstringSlice(v []string) Component {
+func (e Component) WithStringSlice(v []string) Component {
 	e.ordinal = 8
 	e.value = v
 	return e
@@ -269,13 +269,13 @@ func (e *Component) UnmarshalJSON(bytes []byte) error {
 			return fmt.Errorf("cannot unmarshal variant 'xcompo.Icon'")
 		}
 		e.ordinal = 6
-	case "string":
+	case "String":
 		var value string
 		if err := json.Unmarshal(bytes, &value); err != nil {
 			return fmt.Errorf("cannot unmarshal variant 'string'")
 		}
 		e.ordinal = 7
-	case "stringSlice":
+	case "StringSlice":
 		var value []string
 		if err := json.Unmarshal(bytes, &value); err != nil {
 			return fmt.Errorf("cannot unmarshal variant '[]string'")
@@ -294,7 +294,7 @@ func (e *Component) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-func MatchComponent[R any](e Component, onButton func(Button) R, onTextField func(TextField) R, onText func(Text) R, onChapter func(Chapter) R, onRichText func(xcompo.RichText) R, onIcon func(xcompo.Icon) R, onstring func(string) R, onstringSlice func([]string) R, onTextSlice func([]Text) R, _onDefault func(any) R) R {
+func MatchComponent[R any](e Component, onButton func(Button) R, onTextField func(TextField) R, onText func(Text) R, onChapter func(Chapter) R, onRichText func(xcompo.RichText) R, onIcon func(xcompo.Icon) R, onString func(string) R, onStringSlice func([]string) R, onTextSlice func([]Text) R, _onDefault func(any) R) R {
 	if _onDefault == nil {
 		panic(`missing default match: cannot guarantee exhaustive matching`)
 	}
@@ -325,12 +325,12 @@ func MatchComponent[R any](e Component, onButton func(Button) R, onTextField fun
 			return onIcon(e.value.(xcompo.Icon))
 		}
 	case 7:
-		if onstring != nil {
-			return onstring(e.value.(string))
+		if onString != nil {
+			return onString(e.value.(string))
 		}
 	case 8:
-		if onstringSlice != nil {
-			return onstringSlice(e.value.([]string))
+		if onStringSlice != nil {
+			return onStringSlice(e.value.([]string))
 		}
 	case 9:
 		if onTextSlice != nil {

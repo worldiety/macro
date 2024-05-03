@@ -58,6 +58,8 @@ func ParseMacroInvocation(text string, pos Pos) (*MacroInvocation, error) {
 		if err := json.Unmarshal(buf, &m.debugParsedParams); err != nil {
 			return nil, fmt.Errorf("error parsing macro invocation params %s: %v", m.name, err)
 		}
+	} else {
+		m.jsonParams = "{}"
 	}
 
 	return m, nil
