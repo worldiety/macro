@@ -31,6 +31,11 @@ func NewProgram(with func(program *Program)) *Program {
 			}),
 			NewBaseType(func(bt *BaseType) {
 				bt.SetPkg(p)
+				bt.SetName("uint")
+				bt.SetKind(TUInt)
+			}),
+			NewBaseType(func(bt *BaseType) {
+				bt.SetPkg(p)
 				bt.SetName("int32")
 				bt.SetKind(TInt32)
 			}),
@@ -38,6 +43,26 @@ func NewProgram(with func(program *Program)) *Program {
 				bt.SetPkg(p)
 				bt.SetName("int64")
 				bt.SetKind(TInt64)
+			}),
+			NewBaseType(func(bt *BaseType) {
+				bt.SetPkg(p)
+				bt.SetName("uint32")
+				bt.SetKind(TUInt32)
+			}),
+			NewBaseType(func(bt *BaseType) {
+				bt.SetPkg(p)
+				bt.SetName("uint64")
+				bt.SetKind(TUInt64)
+			}),
+			NewBaseType(func(bt *BaseType) {
+				bt.SetPkg(p)
+				bt.SetName("float32")
+				bt.SetKind(TFloat32)
+			}),
+			NewBaseType(func(bt *BaseType) {
+				bt.SetPkg(p)
+				bt.SetName("float64")
+				bt.SetKind(TFloat64)
 			}),
 			NewBaseType(func(bt *BaseType) {
 				bt.SetPkg(p)

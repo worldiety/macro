@@ -59,6 +59,10 @@ func (r *Renderer) RenderFile(file *wdl.File) ([]byte, error) {
 		}
 	}
 
+	for name, qual := range file.Imports() {
+		rFile.AddImport(name, qual)
+	}
+
 	if len(rFile.namedImports) > 0 {
 		tmpImports := make(map[wdl.Identifier]wdl.PkgImportQualifier)
 		for identifier, qualifier := range rFile.namedImports {

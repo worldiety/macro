@@ -27,14 +27,16 @@ type Program struct {
 func Parse(dir string) (*Program, error) {
 	pkgs, err := packages.Load(
 		&packages.Config{
-			Dir:  dir,
-			Mode: packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedModule | packages.LoadAllSyntax,
+			BuildFlags: []string{"-tags", "macos arm64"},
+			Dir:        dir,
+			Mode:       packages.NeedDeps | packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax | packages.NeedModule | packages.LoadAllSyntax,
 		},
-		"./...",
+		//"...", // this loads all deps and stdlib, but fails and balks with a go mod tidy error
+		"./...", // does not load deps and stdlib
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot load packages: %w", err)
 	}
 
 	// Create and build SSA-form program representation.
@@ -176,7 +178,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 	}
 
 	if srcPkg == nil {
-		return nil, fmt.Errorf("cannot find type def in package %s", ref.Qualifier)
+		return nil, fmt.Errorf("src package not found: %s", ref.Qualifier)
 	}
 
 	dstPkg, err := p.getOrInstallPackage(ref.Qualifier)
@@ -184,6 +186,8 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 		return nil, err
 	}
 
+	found := false
+	var objPos token.Position
 	for ident, object := range srcPkg.TypesInfo.Defs {
 
 		if object == nil {
@@ -194,7 +198,10 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 			continue
 		}
 
+		found = true
+
 		pos := srcPkg.Fset.Position(object.Pos())
+		objPos = pos
 		file := p.getOrInstallFile(dstPkg, pos.Filename)
 
 		switch obj := object.Type().(type) {
@@ -296,12 +303,12 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 							field.SetName(wdl.Identifier(f.Name()))
 							ref, err := p.createRef(f.Type())
 							if err != nil {
-								slog.Error("error creating ref for field type", "type", f.Type())
+								slog.Error("error creating ref for field type", "type", f.Type(), "err", err)
 								return
 							}
 							ftype, err := p.getTypeDef(p.Program, ref)
 							if err != nil {
-								slog.Error("error getting def for field type", "type", f.Type())
+								slog.Error("error getting def for field type", "type", f.Type(), "err", err)
 								return
 							}
 
@@ -340,12 +347,37 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 					}), nil
 				}
 			default:
-				slog.Error(fmt.Sprintf("named type not implemented %T", obj))
+				slog.Error(fmt.Sprintf("named type not implemented %T@%v", obj, pos))
 			}
+
+		case *types.Pointer:
+			switch elem := obj.Elem().(type) {
+			case *types.Named:
+				path := ""
+				if elem.Obj().Pkg() != nil {
+					path = elem.Obj().Pkg().Path()
+				}
+				def, err := p.getTypeDef(p.Program, &wdl.TypeRef{
+					Qualifier: wdl.PkgImportQualifier(path),
+					Name:      wdl.Identifier(elem.Obj().Name()),
+				})
+
+				if err != nil {
+					return nil, err
+				}
+				return wdl.NewMutPtr(func(ptr *wdl.MutPtr) {
+					ptr.SetTypeDef(def)
+				}), nil
+			}
+			fmt.Printf("%T", obj.Elem())
+
+			//asobj.Elem()
+		default:
+			slog.Error(fmt.Sprintf("type not implemented %T@%v", obj, objPos))
 		}
 	}
 
-	slog.Error(fmt.Sprintf("cannot convert def in package %v", ref))
+	slog.Error(fmt.Sprintf("cannot convert def in package %v", ref), "found", found)
 
 	return nil, nil
 }
@@ -353,6 +385,12 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 func (p *Program) createRef(typ types.Type) (*wdl.TypeRef, error) {
 	switch t := typ.(type) {
 	case *types.Named:
+		if t.Obj().Pkg() == nil {
+			return &wdl.TypeRef{
+				Qualifier: "", // this happens for universe types like error
+				Name:      wdl.Identifier(t.Obj().Name()),
+			}, nil
+		}
 		return &wdl.TypeRef{
 			Qualifier: wdl.PkgImportQualifier(t.Obj().Pkg().Path()),
 			Name:      wdl.Identifier(t.Obj().Name()),
@@ -379,6 +417,24 @@ func (p *Program) createRef(typ types.Type) (*wdl.TypeRef, error) {
 			return p.Program.MustResolveSimple("std", "bool").AsTypeRef(), nil
 		case types.String:
 			return p.Program.MustResolveSimple("std", "string").AsTypeRef(), nil
+		case types.Int:
+			return p.Program.MustResolveSimple("std", "int").AsTypeRef(), nil
+		case types.Uint:
+			return p.Program.MustResolveSimple("std", "uint").AsTypeRef(), nil
+		case types.Int32:
+			return p.Program.MustResolveSimple("std", "int32").AsTypeRef(), nil
+		case types.Int64:
+			return p.Program.MustResolveSimple("std", "int64").AsTypeRef(), nil
+		case types.Uint32:
+			return p.Program.MustResolveSimple("std", "uint32").AsTypeRef(), nil
+		case types.Uint64:
+			return p.Program.MustResolveSimple("std", "uint64").AsTypeRef(), nil
+		case types.Float32:
+			return p.Program.MustResolveSimple("std", "float32").AsTypeRef(), nil
+		case types.Float64:
+			return p.Program.MustResolveSimple("std", "float64").AsTypeRef(), nil
+		case types.Byte:
+			return p.Program.MustResolveSimple("std", "byte").AsTypeRef(), nil
 		}
 	}
 

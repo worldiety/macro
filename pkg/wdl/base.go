@@ -4,9 +4,14 @@ type Kind int
 
 const (
 	TString Kind = iota + 1
+	TUInt
 	TInt
 	TInt32
 	TInt64
+	TUInt32
+	TUInt64
+	TFloat32
+	TFloat64
 	TByte
 	TAny
 	TBool
