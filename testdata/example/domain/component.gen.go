@@ -7,6 +7,9 @@ import (
 	fmt "fmt"
 )
 
+// This variable is declared to let Linters know, that [_Component] is used at compile time to generate [Component].
+type _ _Component
+
 // A Component is a sum type or tagged union.
 // Actually, we can generate different flavors, so that Go makes fun for modelling business stuff.
 type Component struct {

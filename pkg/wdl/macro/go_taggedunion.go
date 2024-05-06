@@ -227,6 +227,13 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 				line.SetText(e.preamble)
 			}))
 		}))
+
+		file.AddTypeDefs(wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+			dType.SetName("_")
+			dType.SetPkg(file.Pkg())
+			dType.SetUnderlying(def.AsResolvedType().TypeDef())
+			dType.SetComment(wdl.NewSimpleComment(fmt.Sprintf("This variable is declared to let Linters know, that [%s] is used at compile time to generate [%s].", def.Name(), uStruct.Name())).Lines())
+		}))
 		file.AddTypeDefs(uStruct)
 
 		// free but generic match function

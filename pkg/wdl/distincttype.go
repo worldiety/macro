@@ -11,6 +11,15 @@ type DistinctType struct {
 	visibility Visibility
 	typeParams []*ResolvedType
 	underlying TypeDef
+	methods    []*Func
+}
+
+func (d *DistinctType) Methods() []*Func {
+	return d.methods
+}
+
+func (d *DistinctType) SetMethods(methods []*Func) {
+	d.methods = methods
 }
 
 func (d *DistinctType) typeDef() {
