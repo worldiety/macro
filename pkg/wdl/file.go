@@ -2,6 +2,13 @@ package wdl
 
 import "path/filepath"
 
+type MimeType string
+
+const (
+	MimeTypeGo         MimeType = "text/x-go-source"
+	MimeTypeTypeScript MimeType = "text/x-typescript-source"
+)
+
 // File represents a physical source code file respective compilation unit.
 //   - Go: <lowercase AnnotationName>.go
 //   - Java: <CamelCasePrimaryTypeName>.java
@@ -18,6 +25,15 @@ type File struct {
 	modified  bool
 	generated bool
 	imports   map[Identifier]PkgImportQualifier
+	mimeType  MimeType
+}
+
+func (f *File) MimeType() MimeType {
+	return f.mimeType
+}
+
+func (f *File) SetMimeType(mimeType MimeType) {
+	f.mimeType = mimeType
 }
 
 func (f *File) Import(src *File) {

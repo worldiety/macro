@@ -5,6 +5,15 @@ import "fmt"
 type Program struct {
 	packages []*Package
 	std      *Package
+	path     string
+}
+
+func (p *Program) Path() string {
+	return p.path
+}
+
+func (p *Program) SetPath(path string) {
+	p.path = path
 }
 
 func NewProgram(with func(program *Program)) *Program {

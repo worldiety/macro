@@ -14,6 +14,7 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 	"log/slog"
 	"path/filepath"
+	"reflect"
 	"strings"
 )
 
@@ -90,6 +91,9 @@ func Parse(dir string) (*Program, error) {
 	}
 
 	pg := wdl.NewProgram(nil)
+	if len(pkgs) > 0 {
+		pg.SetPath(pkgs[0].Module.Dir)
+	}
 
 	p := &Program{
 		Program:   pg,
@@ -146,6 +150,14 @@ func (p *Program) getOrInstallFile(pkg *wdl.Package, fname string) *wdl.File {
 
 // getTypeDef inserts (if not yet available) the denoted wdl type and returns it.
 func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, error) {
+
+	if ref.TypeParam {
+		// TODO not sure how to handle that. Seems not to make sense to put that into the package
+		return wdl.NewTypeParam(func(tParm *wdl.TypeParam) {
+			tParm.SetName(ref.Name)
+		}), nil
+	}
+
 	if ref.Qualifier == "std" {
 		switch ref.Name {
 		case "Slice":
@@ -212,6 +224,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 
 		switch obj := objType.(type) {
 		case *types.Named:
+			namedObj := obj
 			name := obj.Obj().Name()
 			switch obj := obj.Underlying().(type) {
 			case *types.Interface:
@@ -297,6 +310,13 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 					dstPkg.AddTypeDefs(strct)
 					strct.SetPkg(dstPkg)
 					file.AddTypeDefs(strct)
+					for tpidx := range namedObj.TypeParams().Len() {
+						strct.AddTypeParams(wdl.NewResolvedType(func(rType *wdl.ResolvedType) {
+							tp := namedObj.TypeParams().At(tpidx)
+							rType.SetTypeParam(true)
+							rType.SetName(wdl.Identifier(tp.Obj().Name()))
+						}))
+					}
 
 					if comment := dstPkg.TypeComments()[strct.Name()]; comment != nil {
 						strct.SetComment(comment.Lines())
@@ -304,22 +324,39 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 					}
 
 					for fidx := range obj.NumFields() {
+						tag := reflect.StructTag(obj.Tag(fidx))
 						f := obj.Field(fidx)
 						strct.AddFields(wdl.NewField(func(field *wdl.Field) {
 							field.SetName(wdl.Identifier(f.Name()))
-							ref, err := p.createRef(f.Type())
+							if f.Exported() {
+								field.SetVisibility(wdl.Public)
+							} else {
+								field.SetVisibility(wdl.PackagePrivat)
+							}
+
+							value, ok := tag.Lookup("json")
+							if ok {
+								field.PutTag("json", value)
+							}
+
+							what := f.Type()
+							if f.Origin() != nil {
+								what = f.Origin().Type() // TODO WTF we get random basic types like string for non-instantiated type params???
+							}
+
+							ref, err := p.createRef(what)
 							if err != nil {
-								slog.Error("error creating ref for field type", "type", f.Type(), "err", err)
+								slog.Error("error creating ref for field type", "type", what, "err", err)
 								return
 							}
 							ftype, err := p.getTypeDef(p.Program, ref)
 							if err != nil {
-								slog.Error("error getting def for field type", "type", f.Type(), "err", err)
+								slog.Error("error getting def for field type", "type", what, "err", err)
 								return
 							}
 
 							if ftype == nil {
-								slog.Error("oops with nil type for field type", "type", f.Type())
+								slog.Error("oops with nil type for field type", "type", what)
 								return
 							}
 
@@ -383,6 +420,11 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dstPkg.AddTypeDefs(dType)
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "bool").TypeDef())
+
+			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+				dType.SetComment(comment.Lines())
+				dType.SetMacros(comment.Macros())
+			}
 		}), nil
 	case types.String:
 		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
@@ -390,13 +432,48 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dstPkg.AddTypeDefs(dType)
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "string").TypeDef())
+
+			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+				dType.SetComment(comment.Lines())
+				dType.SetMacros(comment.Macros())
+			}
 		}), nil
+
 	case types.Int:
 		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
 			dType.SetName(wdl.Identifier(name))
 			dstPkg.AddTypeDefs(dType)
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int").TypeDef())
+
+			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+				dType.SetComment(comment.Lines())
+				dType.SetMacros(comment.Macros())
+			}
+		}), nil
+	case types.Int32:
+		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+			dType.SetName(wdl.Identifier(name))
+			dstPkg.AddTypeDefs(dType)
+			dType.SetPkg(dstPkg)
+			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int32").TypeDef())
+
+			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+				dType.SetComment(comment.Lines())
+				dType.SetMacros(comment.Macros())
+			}
+		}), nil
+	case types.Int64:
+		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+			dType.SetName(wdl.Identifier(name))
+			dstPkg.AddTypeDefs(dType)
+			dType.SetPkg(dstPkg)
+			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int64").TypeDef())
+
+			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+				dType.SetComment(comment.Lines())
+				dType.SetMacros(comment.Macros())
+			}
 		}), nil
 	}
 
@@ -405,6 +482,12 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 
 func (p *Program) createRef(typ types.Type) (*wdl.TypeRef, error) {
 	switch t := typ.(type) {
+	case *types.TypeParam:
+		return &wdl.TypeRef{
+			Qualifier: "",
+			Name:      wdl.Identifier(t.Obj().Name()),
+			TypeParam: true,
+		}, nil
 	case *types.Named:
 		if t.Obj().Pkg() == nil {
 			return &wdl.TypeRef{

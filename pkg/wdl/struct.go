@@ -13,6 +13,19 @@ type Field struct {
 	name       Identifier
 	typeDef    *ResolvedType
 	visibility Visibility
+	tags       map[string]string
+}
+
+func (f *Field) PutTag(key, value string) {
+	f.tags[key] = value
+}
+
+func (f *Field) Tags() map[string]string {
+	return f.tags
+}
+
+func (f *Field) SetTags(tags map[string]string) {
+	f.tags = tags
 }
 
 func (f *Field) Visibility() Visibility {
@@ -24,7 +37,7 @@ func (f *Field) SetVisibility(visibility Visibility) {
 }
 
 func NewField(with func(field *Field)) *Field {
-	f := &Field{}
+	f := &Field{tags: make(map[string]string)}
 	if with != nil {
 		with(f)
 	}

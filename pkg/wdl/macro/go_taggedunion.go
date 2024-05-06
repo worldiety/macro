@@ -218,6 +218,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 	union.Pkg().AddFiles(wdl.NewFile(func(file *wdl.File) {
 		file.AddImport("json", "encoding/json")
 		file.AddImport("fmt", "fmt")
+		file.SetMimeType(wdl.MimeTypeGo)
 
 		file.SetName(strings.ToLower(union.Name().String()) + ".gen.go")
 		file.SetPath(union.File().Path())

@@ -2,11 +2,20 @@ package wdl
 
 // ResolvedType tries to simplify things.
 type ResolvedType struct {
-	pkg     *Package
-	name    Identifier
-	typeDef TypeDef
-	params  []*ResolvedType
-	pointer bool
+	pkg       *Package
+	name      Identifier
+	typeDef   TypeDef
+	params    []*ResolvedType
+	pointer   bool
+	typeParam bool
+}
+
+func (r *ResolvedType) TypeParam() bool {
+	return r.typeParam
+}
+
+func (r *ResolvedType) SetTypeParam(typeParam bool) {
+	r.typeParam = typeParam
 }
 
 func (r *ResolvedType) AsTypeRef() *TypeRef {
