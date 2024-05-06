@@ -130,7 +130,7 @@ func (p *Program) init() error {
 
 func (p *Program) getOrInstallFile(pkg *wdl.Package, fname string) *wdl.File {
 	for _, file := range pkg.Files() {
-		if file.Path() == fname {
+		if file.AbsolutePath() == fname {
 			return file
 		}
 	}
@@ -204,7 +204,13 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 		objPos = pos
 		file := p.getOrInstallFile(dstPkg, pos.Filename)
 
-		switch obj := object.Type().(type) {
+		objType := object.Type()
+		// TODO we have a logical infinite resolver problem between non-pointer ref referring to pointer-types of the same type
+		if ptr, ok := objType.(*types.Pointer); ok {
+			objType = ptr.Elem()
+		}
+
+		switch obj := objType.(type) {
 		case *types.Named:
 			name := obj.Obj().Name()
 			switch obj := obj.Underlying().(type) {
@@ -323,40 +329,27 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 
 				}), nil
 			case *types.Basic:
-				switch obj.Kind() {
-				case types.Bool:
-					return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
-						dType.SetName(wdl.Identifier(name))
-						dstPkg.AddTypeDefs(dType)
-						dType.SetPkg(dstPkg)
-						dType.SetUnderlying(p.Program.MustResolveSimple("std", "bool").TypeDef())
-					}), nil
-				case types.String:
-					return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
-						dType.SetName(wdl.Identifier(name))
-						dstPkg.AddTypeDefs(dType)
-						dType.SetPkg(dstPkg)
-						dType.SetUnderlying(p.Program.MustResolveSimple("std", "string").TypeDef())
-					}), nil
-				case types.Int:
-					return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
-						dType.SetName(wdl.Identifier(name))
-						dstPkg.AddTypeDefs(dType)
-						dType.SetPkg(dstPkg)
-						dType.SetUnderlying(p.Program.MustResolveSimple("std", "int").TypeDef())
-					}), nil
+				typ, err := p.fromBasicType(dstPkg, obj, name)
+				if err != nil {
+					return nil, err
+				}
+				if typ != nil {
+					return typ, nil
 				}
 			default:
 				slog.Error(fmt.Sprintf("named type not implemented %T@%v", obj, pos))
 			}
 
 		case *types.Pointer:
+			/* TODO this cannot work because we are not using the wdl ref correctly
 			switch elem := obj.Elem().(type) {
 			case *types.Named:
+
 				path := ""
 				if elem.Obj().Pkg() != nil {
 					path = elem.Obj().Pkg().Path()
 				}
+
 				def, err := p.getTypeDef(p.Program, &wdl.TypeRef{
 					Qualifier: wdl.PkgImportQualifier(path),
 					Name:      wdl.Identifier(elem.Obj().Name()),
@@ -370,7 +363,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 				}), nil
 			}
 			fmt.Printf("%T", obj.Elem())
-
+			*/
 			//asobj.Elem()
 		default:
 			slog.Error(fmt.Sprintf("type not implemented %T@%v", obj, objPos))
@@ -378,6 +371,34 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 	}
 
 	slog.Error(fmt.Sprintf("cannot convert def in package %v", ref), "found", found)
+
+	return nil, nil
+}
+
+func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name string) (wdl.TypeDef, error) {
+	switch obj.Kind() {
+	case types.Bool:
+		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+			dType.SetName(wdl.Identifier(name))
+			dstPkg.AddTypeDefs(dType)
+			dType.SetPkg(dstPkg)
+			dType.SetUnderlying(p.Program.MustResolveSimple("std", "bool").TypeDef())
+		}), nil
+	case types.String:
+		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+			dType.SetName(wdl.Identifier(name))
+			dstPkg.AddTypeDefs(dType)
+			dType.SetPkg(dstPkg)
+			dType.SetUnderlying(p.Program.MustResolveSimple("std", "string").TypeDef())
+		}), nil
+	case types.Int:
+		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+			dType.SetName(wdl.Identifier(name))
+			dstPkg.AddTypeDefs(dType)
+			dType.SetPkg(dstPkg)
+			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int").TypeDef())
+		}), nil
+	}
 
 	return nil, nil
 }

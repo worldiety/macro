@@ -1,5 +1,7 @@
 package wdl
 
+import "path/filepath"
+
 // File represents a physical source code file respective compilation unit.
 //   - Go: <lowercase AnnotationName>.go
 //   - Java: <CamelCasePrimaryTypeName>.java
@@ -15,6 +17,10 @@ type File struct {
 	path     string
 	modified bool
 	imports  map[Identifier]PkgImportQualifier
+}
+
+func (f *File) AbsolutePath() string {
+	return filepath.Join(f.path, f.name)
 }
 
 func (f *File) Imports() map[Identifier]PkgImportQualifier {
