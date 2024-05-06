@@ -222,6 +222,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 		file.SetName(strings.ToLower(union.Name().String()) + ".gen.go")
 		file.SetPath(union.File().Path())
 		file.SetModified(true)
+		file.SetGenerated(true)
 		file.SetPreamble(wdl.NewComment(func(comment *wdl.Comment) {
 			comment.AddLines(wdl.NewCommentLine(func(line *wdl.CommentLine) {
 				line.SetText(e.preamble)

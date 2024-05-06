@@ -223,3 +223,151 @@ func MatchComponent[R any](e Component, onButton func(Button) R, onTextField fun
 
 	return _onDefault(e.value)
 }
+
+// This variable is declared to let Linters know, that [_ExampleType] is used at compile time to generate [ExampleType].
+type _ _ExampleType
+type ExampleType struct {
+	ordinal int
+	value   any
+}
+
+func (e ExampleType) Unwrap() any {
+	return e.value
+}
+
+func (e ExampleType) Ordinal() int {
+	return e.ordinal
+}
+
+func (e ExampleType) Valid() bool {
+	return e.ordinal > 0
+}
+
+// Switch provides an exhaustive and type safe closure callback mechanic. Nil callbacks are allowed. Unmatched branches are delegated into a default case.
+func (e ExampleType) Switch(onButton func(Button), onTextField func(TextField), _onDefault func(any)) {
+	switch e.ordinal {
+	case 1:
+		if onButton != nil {
+			onButton(e.value.(Button))
+			return
+		}
+	case 2:
+		if onTextField != nil {
+			onTextField(e.value.(TextField))
+			return
+		}
+	}
+
+	if _onDefault != nil {
+		_onDefault(e.value)
+	}
+}
+
+func (e ExampleType) AsButton() (Button, bool) {
+	var zero Button
+	if e.ordinal == 1 {
+		return e.value.(Button), true
+	}
+
+	return zero, false
+}
+
+func (e ExampleType) WithButton(v Button) ExampleType {
+	e.ordinal = 1
+	e.value = v
+	return e
+}
+
+func (e ExampleType) AsTextField() (TextField, bool) {
+	var zero TextField
+	if e.ordinal == 2 {
+		return e.value.(TextField), true
+	}
+
+	return zero, false
+}
+
+func (e ExampleType) WithTextField(v TextField) ExampleType {
+	e.ordinal = 2
+	e.value = v
+	return e
+}
+
+func (e ExampleType) MarshalJSON() ([]byte, error) {
+	if e.ordinal == 0 {
+		return nil, fmt.Errorf("marshalling a zero value is not allowed")
+	}
+
+	// note, that by definition, this kind of encoding does not work with union types which evaluates to null, arrays or primitives.
+	// Chose adjacent encoding instead.
+	buf, err := json.Marshal(e.value)
+	if err != nil {
+		return nil, err
+	}
+	var prefix []byte
+
+	switch e.ordinal {
+	case 1:
+		prefix = []byte(`{"type":"Button"`)
+	case 2:
+		prefix = []byte(`{"type":"TextField"`)
+	}
+
+	if len(buf) > 2 {
+		// we expect an empty object like {} or at least an object with a single attribute, which requires a , separator
+		prefix = append(prefix, ',')
+	}
+	buf = append(buf[1:], prefix...)
+	copy(buf[len(prefix):], buf)
+	copy(buf, prefix)
+
+	return buf, nil
+}
+
+func (e *ExampleType) UnmarshalJSON(bytes []byte) error {
+	typeOnly := struct {
+		Type string `json:"type"`
+	}{}
+	if err := json.Unmarshal(bytes, &typeOnly); err != nil {
+		return err
+	}
+	switch typeOnly.Type {
+	case "Button":
+		var value Button
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Button'")
+		}
+		e.ordinal = 1
+		e.value = value
+	case "TextField":
+		var value TextField
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'TextField'")
+		}
+		e.ordinal = 2
+		e.value = value
+	default:
+		return fmt.Errorf("unknown type variant name '%s'", typeOnly.Type)
+	}
+
+	return nil
+}
+
+func MatchExampleType[R any](e ExampleType, onButton func(Button) R, onTextField func(TextField) R, _onDefault func(any) R) R {
+	if _onDefault == nil {
+		panic(`missing default match: cannot guarantee exhaustive matching`)
+	}
+
+	switch e.ordinal {
+	case 1:
+		if onButton != nil {
+			return onButton(e.value.(Button))
+		}
+	case 2:
+		if onTextField != nil {
+			return onTextField(e.value.(TextField))
+		}
+	}
+
+	return _onDefault(e.value)
+}

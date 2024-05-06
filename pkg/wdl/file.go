@@ -9,14 +9,47 @@ type File struct {
 	// A Preamble comment belongs not to any type and is usually
 	// something like a license or generator header as the first comment In the actual file.
 	// The files comment is actually Obj.Comment.
-	preamble *Comment
-	comment  *Comment
-	name     string
-	typeDefs []TypeDef
-	pkg      *Package
-	path     string
-	modified bool
-	imports  map[Identifier]PkgImportQualifier
+	preamble  *Comment
+	comment   *Comment
+	name      string
+	typeDefs  []TypeDef
+	pkg       *Package
+	path      string
+	modified  bool
+	generated bool
+	imports   map[Identifier]PkgImportQualifier
+}
+
+func (f *File) Import(src *File) {
+	f.preamble = src.preamble
+	src.preamble = nil
+
+	f.comment = src.comment
+	src.comment = nil
+
+	for _, def := range src.typeDefs {
+		f.typeDefs = append(f.typeDefs, def)
+	}
+	src.typeDefs = nil
+
+	f.pkg = src.pkg
+	f.path = src.path
+	f.modified = true
+	f.generated = src.generated
+
+	for identifier, qualifier := range src.imports {
+		f.imports[identifier] = qualifier
+	}
+	clear(src.imports)
+
+}
+
+func (f *File) Generated() bool {
+	return f.generated
+}
+
+func (f *File) SetGenerated(generated bool) {
+	f.generated = generated
 }
 
 func (f *File) AbsolutePath() string {

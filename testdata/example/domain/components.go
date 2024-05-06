@@ -8,6 +8,11 @@ type _Component interface {
 	Button | TextField | Text | Chapter
 }
 
+// #[go.TaggedUnion]
+type _ExampleType interface {
+	Button | TextField
+}
+
 type Blub error
 
 // Another doc.
