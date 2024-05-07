@@ -34,6 +34,10 @@ func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 			return "boolean"
 		case wdl.TByte:
 			return "byte"
+		case wdl.TFloat32:
+			fallthrough
+		case wdl.TFloat64:
+			return "number"
 		default:
 			panic(fmt.Errorf("implement me: %v", def.Kind()))
 		}
@@ -47,7 +51,6 @@ func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 		return def.Name().String()
 
 	default:
-		r.AddImport(rtype.Name(), wdl.PkgImportQualifier(filepath.Join(string(r.selfImportPath), tsLowerNameStr(rtype.Name().String()))))
 
 		if rtype.Pkg().Name() == "std" {
 			switch rtype.Name() {
@@ -57,10 +60,17 @@ func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 				if len(rtype.Params()) != 1 {
 					panic(fmt.Errorf("invalid Slice type param: %#v", rtype))
 				}
-				return "[]" + r.TsType(rtype.Params()[0])
+				return r.TsType(rtype.Params()[0]) + "[]"
+			case "Map":
+				if len(rtype.Params()) != 2 {
+					panic(fmt.Errorf("invalid map type param: %#v", rtype))
+				}
+				return "Record<" + r.TsType(rtype.Params()[0]) + "," + r.TsType(rtype.Params()[1]) + ">"
 			}
 
 		}
+
+		r.AddImport(rtype.Name(), wdl.PkgImportQualifier(filepath.Join(string(r.selfImportPath), tsLowerNameStr(rtype.Name().String()))))
 
 		tmp := rtype.Name().String()
 		if len(rtype.Params()) > 0 {

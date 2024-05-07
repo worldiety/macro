@@ -96,6 +96,20 @@ func NewProgram(with func(program *Program)) *Program {
 				strct.SetPkg(p)
 				strct.SetName("Slice")
 			}),
+			NewStruct(func(strct *Struct) {
+				strct.SetPkg(p)
+				strct.SetName("Map")
+				strct.SetTypeParams([]*ResolvedType{
+					NewResolvedType(func(rType *ResolvedType) {
+						rType.SetName("Key")
+						rType.SetTypeParam(true)
+					}),
+					NewResolvedType(func(rType *ResolvedType) {
+						rType.SetName("Value")
+						rType.SetTypeParam(true)
+					}),
+				})
+			}),
 		)
 	}))
 

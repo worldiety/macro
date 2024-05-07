@@ -165,6 +165,10 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 						e = err
 						return
 					}
+					if rp == nil {
+						slog.Error("cannot resolve type parameter", "param", param, "target", ref)
+						continue
+					}
 					tmp = append(tmp, rp.AsResolvedType())
 				}
 				res.SetTypeParams(tmp)
@@ -398,10 +402,6 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 
 							}
 
-							if f.Name() == "PreIcon" {
-								fmt.Println("got field")
-							}
-
 							ref, err := p.createRef(f.Type(), args...)
 							if err != nil {
 								slog.Error("error creating ref for field type", "type", f.Type(), "err", err)
@@ -590,6 +590,18 @@ func (p *Program) createRef(typ types.Type, generics ...types.Type) (r *wdl.Type
 		slice := p.Program.MustResolveSimple("std", "Slice").AsTypeRef()
 		slice.Params = append(slice.Params, ref)
 		return slice, nil
+	case *types.Map:
+		refKey, err := p.createRef(t.Key())
+		if err != nil {
+			return nil, err
+		}
+		refVal, err := p.createRef(t.Elem())
+		if err != nil {
+			return nil, err
+		}
+		maep := p.Program.MustResolveSimple("std", "Map").AsTypeRef()
+		maep.Params = append(maep.Params, refKey, refVal)
+		return maep, nil
 	case *types.Basic:
 		switch t.Kind() {
 		case types.Bool:
