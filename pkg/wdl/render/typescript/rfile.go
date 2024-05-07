@@ -43,13 +43,13 @@ func (r *Renderer) RenderFile(file *wdl.File) ([]byte, error) {
 
 	// file license or whatever
 	if file.Preamble() != nil {
-		r.writeComment(w, false, file.Pkg().Name().String(), file.Preamble().String())
+		r.writeComment(w, false, file.Pkg().Name().String(), file.Preamble().String(), 0)
 		w.Printf("\n\n") // double line break, otherwise the formatter will purge it
 	}
 
 	// actual package comment
 	if file.Comment() != nil {
-		r.writeComment(w, true, file.Pkg().Name().String(), file.Comment().String())
+		r.writeComment(w, true, file.Pkg().Name().String(), file.Comment().String(), 0)
 	}
 
 	// render everything into tmp first, the importer beautifies all required imports on-the-go

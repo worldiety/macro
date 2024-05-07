@@ -25,20 +25,22 @@ func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 		switch def.Kind() {
 		case wdl.TString:
 			return "string"
+		case wdl.TByte:
+
+			return "number /*uint8*/"
 		case wdl.TInt:
-			fallthrough
+			return "number /*int*/"
 		case wdl.TInt64:
-			return "number"
+			return "number /*int64*/"
 		case wdl.TAny:
 			return "any"
 		case wdl.TBool:
 			return "boolean"
-		case wdl.TByte:
-			return "byte"
+
 		case wdl.TFloat32:
-			fallthrough
+			return "number /*float32*/"
 		case wdl.TFloat64:
-			return "number"
+			return "number /*float64*/"
 		default:
 			panic(fmt.Errorf("implement me: %v", def.Kind()))
 		}
@@ -79,7 +81,7 @@ func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 			for i, resolvedType := range rtype.Params() {
 				tmp += r.TsType(resolvedType)
 				if i != len(rtype.Params())-1 {
-					tmp += ","
+					tmp += ", "
 				}
 			}
 			tmp += ">"

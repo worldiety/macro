@@ -10,10 +10,19 @@ const (
 )
 
 type Field struct {
+	comment    *Comment
 	name       Identifier
 	typeDef    *ResolvedType
 	visibility Visibility
 	tags       map[string]string
+}
+
+func (f *Field) Comment() *Comment {
+	return f.comment
+}
+
+func (f *Field) SetComment(comment *Comment) {
+	f.comment = comment
 }
 
 func (f *Field) PutTag(key, value string) {

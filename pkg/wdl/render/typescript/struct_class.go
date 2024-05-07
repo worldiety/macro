@@ -5,9 +5,9 @@ import (
 	"github.com/worldiety/macro/pkg/wdl/render"
 )
 
-func (r *RFile) renderStruct(def *wdl.Struct, w *render.Writer) error {
+func (r *RFile) renderStructClass(def *wdl.Struct, w *render.Writer) error {
 
-	r.parent.writeCommentNode(w, false, "", wdl.NewComment(func(comment *wdl.Comment) {
+	r.parent.writeCommentNode(w, false, "", 0, wdl.NewComment(func(comment *wdl.Comment) {
 		comment.SetLines(def.Comment())
 	}))
 	w.Printf("export class %s", tsUpperName(def))

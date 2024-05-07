@@ -374,6 +374,10 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 						f := obj.Field(fidx)
 						strct.AddFields(wdl.NewField(func(field *wdl.Field) {
 							field.SetName(wdl.Identifier(f.Name()))
+							if fieldComment := dstPkg.TypeComments()[strct.Name()+"."+field.Name()]; fieldComment != nil {
+								field.SetComment(fieldComment)
+							}
+
 							if f.Exported() {
 								field.SetVisibility(wdl.Public)
 							} else {
@@ -383,6 +387,11 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 							value, ok := tag.Lookup("json")
 							if ok {
 								field.PutTag("json", value)
+							}
+
+							constValue, ok := tag.Lookup("value")
+							if ok {
+								field.PutTag("const", constValue)
 							}
 
 							var args []types.Type
@@ -665,6 +674,7 @@ func (p *Program) getOrInstallPackage(qualifier wdl.PkgImportQualifier) (*wdl.Pa
 						res.Comment().AddMacros(pkgLevelDoc.Macros()...)
 						res.Comment().AddLines(pkgLevelDoc.Lines()...)
 					}
+
 				}
 			}
 

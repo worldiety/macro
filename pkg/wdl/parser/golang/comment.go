@@ -18,6 +18,18 @@ func makeIdentComments(pkg *packages.Package) (map[wdl.Identifier]*wdl.Comment, 
 				if decl.Doc != nil {
 					for _, spec := range decl.Specs {
 						if spec, ok := spec.(*ast.TypeSpec); ok {
+
+							switch def := spec.Type.(type) {
+							case *ast.StructType:
+								for _, field := range def.Fields.List {
+									if field.Doc != nil {
+										for _, name := range field.Names {
+											typeDeclrComments[spec.Name.Name+"."+name.Name] = field.Doc
+										}
+									}
+								}
+							}
+
 							if spec.Name != nil {
 								typeDeclrComments[spec.Name.Name] = decl.Doc
 								continue nextDeclr

@@ -6,7 +6,7 @@ import (
 )
 
 func (r *RFile) renderFunc(f *wdl.Func, w *render.Writer) error {
-	r.parent.writeComments(w, f.Comment())
+	r.parent.writeComments(w, 0, f.Comment())
 	w.Printf("func ")
 	if f.Receiver() != nil {
 		w.Printf("(%s %s) ", f.Receiver().Name(), r.TsType(f.Receiver().TypeDef()))
