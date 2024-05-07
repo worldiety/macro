@@ -3,12 +3,12 @@ package domain
 // A Component is a sum type or tagged union.
 // Actually, we can generate different flavors, so that Go makes fun for modelling business stuff.
 //
-// #[go.TaggedUnion "json":"intern", "tag":"type", "names":["helloBtn","ATef","str","Chappy"]]
+// #[go.TaggedUnion "json":"adjacent", "tag":"type", "names":["helloBtn","ATef","str","Chappy"]]
 type _Component interface {
 	Button | TextField | Text | Chapter
 }
 
-// #[go.TaggedUnion]
+// #[go.TaggedUnion "json":"internal"]
 type _ExampleType interface {
 	Button | TextField
 }

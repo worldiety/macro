@@ -7,7 +7,7 @@ import (
 	fmt "fmt"
 )
 
-// This variable is declared to let Linters know, that [_Component] is used at compile time to generate [Component].
+// This variable is declared to let linters know, that [_Component] is used at compile time to generate [Component].
 type _ _Component
 
 // A Component is a sum type or tagged union.
@@ -126,32 +126,35 @@ func (e Component) MarshalJSON() ([]byte, error) {
 
 	// note, that by definition, this kind of encoding does not work with union types which evaluates to null, arrays or primitives.
 	// Chose adjacent encoding instead.
-	buf, err := json.Marshal(e.value)
-	if err != nil {
-		return nil, err
+	type adjacentlyTagged[T any] struct {
+		Type  string `json:"type"`
+		Value T      `json:"content"`
 	}
-	var prefix []byte
 
 	switch e.ordinal {
 	case 1:
-		prefix = []byte(`{"type":"helloBtn"`)
+		return json.Marshal(adjacentlyTagged[Button]{
+			Type:  "helloBtn",
+			Value: e.value.(Button),
+		})
 	case 2:
-		prefix = []byte(`{"type":"ATef"`)
+		return json.Marshal(adjacentlyTagged[TextField]{
+			Type:  "ATef",
+			Value: e.value.(TextField),
+		})
 	case 3:
-		prefix = []byte(`{"type":"str"`)
+		return json.Marshal(adjacentlyTagged[Text]{
+			Type:  "str",
+			Value: e.value.(Text),
+		})
 	case 4:
-		prefix = []byte(`{"type":"Chappy"`)
+		return json.Marshal(adjacentlyTagged[Chapter]{
+			Type:  "Chappy",
+			Value: e.value.(Chapter),
+		})
+	default:
+		return nil, fmt.Errorf("unknown type ordinal variant '%d'", e.ordinal)
 	}
-
-	if len(buf) > 2 {
-		// we expect an empty object like {} or at least an object with a single attribute, which requires a , separator
-		prefix = append(prefix, ',')
-	}
-	buf = append(buf[1:], prefix...)
-	copy(buf[len(prefix):], buf)
-	copy(buf, prefix)
-
-	return buf, nil
 }
 
 func (e *Component) UnmarshalJSON(bytes []byte) error {
@@ -161,35 +164,39 @@ func (e *Component) UnmarshalJSON(bytes []byte) error {
 	if err := json.Unmarshal(bytes, &typeOnly); err != nil {
 		return err
 	}
+	type adjacentlyTagged[T any] struct {
+		Type  string `json:"type"`
+		Value T      `json:"content"`
+	}
 	switch typeOnly.Type {
 	case "helloBtn":
-		var value Button
+		var value adjacentlyTagged[Button]
 		if err := json.Unmarshal(bytes, &value); err != nil {
 			return fmt.Errorf("cannot unmarshal variant 'Button'")
 		}
 		e.ordinal = 1
-		e.value = value
+		e.value = value.Value
 	case "ATef":
-		var value TextField
+		var value adjacentlyTagged[TextField]
 		if err := json.Unmarshal(bytes, &value); err != nil {
 			return fmt.Errorf("cannot unmarshal variant 'TextField'")
 		}
 		e.ordinal = 2
-		e.value = value
+		e.value = value.Value
 	case "str":
-		var value Text
+		var value adjacentlyTagged[Text]
 		if err := json.Unmarshal(bytes, &value); err != nil {
 			return fmt.Errorf("cannot unmarshal variant 'Text'")
 		}
 		e.ordinal = 3
-		e.value = value
+		e.value = value.Value
 	case "Chappy":
-		var value Chapter
+		var value adjacentlyTagged[Chapter]
 		if err := json.Unmarshal(bytes, &value); err != nil {
 			return fmt.Errorf("cannot unmarshal variant 'Chapter'")
 		}
 		e.ordinal = 4
-		e.value = value
+		e.value = value.Value
 	default:
 		return fmt.Errorf("unknown type variant name '%s'", typeOnly.Type)
 	}
@@ -224,7 +231,7 @@ func MatchComponent[R any](e Component, onButton func(Button) R, onTextField fun
 	return _onDefault(e.value)
 }
 
-// This variable is declared to let Linters know, that [_ExampleType] is used at compile time to generate [ExampleType].
+// This variable is declared to let linters know, that [_ExampleType] is used at compile time to generate [ExampleType].
 type _ _ExampleType
 type ExampleType struct {
 	ordinal int
