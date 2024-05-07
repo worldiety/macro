@@ -5,6 +5,7 @@ import (
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render"
 	"path/filepath"
+	"strings"
 	"unicode"
 )
 
@@ -95,8 +96,12 @@ func tsUpperName(f interface {
 	if f.Name() == "" {
 		return ""
 	}
+	name := f.Name().String()
+	if strings.HasPrefix(name, "_") {
+		name = name[1:]
+	}
 
-	return tsUpperNameStr(string(f.Name()))
+	return tsUpperNameStr(name)
 }
 
 func tsUpperNameStr(s string) string {

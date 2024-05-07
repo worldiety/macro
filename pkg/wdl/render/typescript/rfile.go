@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render"
+	"slices"
 )
 
 type RFile struct {
@@ -73,7 +74,14 @@ func (r *Renderer) RenderFile(file *wdl.File) ([]byte, error) {
 			tmpImports[identifier] = qualifier
 		}
 
-		for namedImport, qualifier := range tmpImports {
+		var keySet []wdl.Identifier
+		for key := range tmpImports {
+			keySet = append(keySet, key)
+		}
+		slices.Sort(keySet)
+
+		for _, namedImport := range keySet {
+			qualifier := tmpImports[namedImport]
 			w.Printf("import type { %s } from '%s';\n", tsUpperNameStr(string(namedImport)), atPathName(string(qualifier)))
 		}
 

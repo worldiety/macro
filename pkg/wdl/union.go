@@ -8,6 +8,15 @@ type Union struct {
 	name       Identifier
 	file       *File
 	typeParams []*ResolvedType
+	visibility Visibility
+}
+
+func (u *Union) Visibility() Visibility {
+	return u.visibility
+}
+
+func (u *Union) SetVisibility(visibility Visibility) {
+	u.visibility = visibility
 }
 
 func (u *Union) Clone() TypeDef {
