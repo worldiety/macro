@@ -71,21 +71,36 @@ type Func struct {
 	comment    []*CommentLine
 	args       []*Param
 	results    []*Param
-	typeParams []*Param
+	typeParams []*ResolvedType
 	receiver   *Param
 	visibility Visibility
 	body       *Block
 }
 
-func (f *Func) TypeParams() []*Param {
+func (f *Func) Clone() TypeDef {
+	return &Func{
+		pkg:        f.pkg,
+		name:       f.name,
+		macros:     append([]*MacroInvocation{}, f.macros...),
+		comment:    append([]*CommentLine{}, f.comment...),
+		args:       append([]*Param{}, f.args...),
+		results:    append([]*Param{}, f.results...),
+		typeParams: append([]*ResolvedType{}, f.typeParams...),
+		receiver:   f.receiver,
+		visibility: f.visibility,
+		body:       f.body,
+	}
+}
+
+func (f *Func) TypeParams() []*ResolvedType {
 	return f.typeParams
 }
 
-func (f *Func) SetTypeParams(typeParams []*Param) {
+func (f *Func) SetTypeParams(typeParams []*ResolvedType) {
 	f.typeParams = typeParams
 }
 
-func (f *Func) AddTypeParams(typeParams ...*Param) {
+func (f *Func) AddTypeParams(typeParams ...*ResolvedType) {
 	f.typeParams = append(f.typeParams, typeParams...)
 }
 

@@ -18,9 +18,23 @@ const (
 )
 
 type BaseType struct {
-	pkg  *Package
-	name Identifier
-	kind Kind
+	pkg        *Package
+	name       Identifier
+	kind       Kind
+	typeParams []*ResolvedType
+}
+
+func (b *BaseType) Clone() TypeDef {
+	return &BaseType{
+		pkg:        b.pkg,
+		name:       b.name,
+		kind:       b.kind,
+		typeParams: append([]*ResolvedType{}, b.typeParams...),
+	}
+}
+
+func (b *BaseType) SetTypeParams(typeParams []*ResolvedType) {
+	b.typeParams = typeParams
 }
 
 func NewBaseType(with func(bt *BaseType)) *BaseType {

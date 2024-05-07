@@ -14,6 +14,20 @@ type DistinctType struct {
 	methods    []*Func
 }
 
+func (d *DistinctType) Clone() TypeDef {
+	return &DistinctType{
+		pkg:        d.pkg,
+		macros:     append([]*MacroInvocation{}, d.macros...),
+		comment:    append([]*CommentLine{}, d.comment...),
+		types:      append([]*ResolvedType{}, d.types...),
+		name:       d.name,
+		visibility: d.visibility,
+		typeParams: append([]*ResolvedType{}, d.typeParams...),
+		underlying: d.underlying,
+		methods:    append([]*Func{}, d.methods...),
+	}
+}
+
 func (d *DistinctType) Methods() []*Func {
 	return d.methods
 }

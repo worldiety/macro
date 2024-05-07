@@ -1,11 +1,27 @@
 package wdl
 
 type Interface struct {
-	pkg     *Package
-	name    Identifier
-	macros  []*MacroInvocation
-	comment []*CommentLine
-	types   []*ResolvedType
+	pkg        *Package
+	name       Identifier
+	macros     []*MacroInvocation
+	comment    []*CommentLine
+	types      []*ResolvedType // todo is this also union types?
+	typeParams []*ResolvedType
+}
+
+func (u *Interface) Clone() TypeDef {
+	return &Interface{
+		pkg:        u.pkg,
+		name:       u.name,
+		macros:     append([]*MacroInvocation{}, u.macros...),
+		comment:    append([]*CommentLine{}, u.comment...),
+		types:      append([]*ResolvedType{}, u.types...),
+		typeParams: append([]*ResolvedType{}, u.typeParams...),
+	}
+}
+
+func (u *Interface) SetTypeParams(typeParams []*ResolvedType) {
+	u.typeParams = typeParams
 }
 
 func (u *Interface) Pkg() *Package {

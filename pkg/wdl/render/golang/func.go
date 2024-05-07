@@ -21,7 +21,7 @@ func (r *RFile) renderFunc(f *wdl.Func, w *render.Writer) error {
 			if param.Name() != "" {
 				w.Printf("%s ", param.Name())
 			}
-			w.Print(r.GoType(param.TypeDef()))
+			w.Print(r.GoType(param))
 			w.Print(",")
 		}
 		w.Print("]")

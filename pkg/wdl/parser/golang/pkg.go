@@ -82,7 +82,10 @@ func Parse(dir string) (*Program, error) {
 			}
 		}
 
-		fmt.Printf("%s.%s.%s -> %s.%s\n", callerPkg, callerReceiverName, callerFuncName, calleePkg, calleeFuncName)
+		//fmt.Printf("%s.%s.%s -> %s.%s\n", callerPkg, callerReceiverName, callerFuncName, calleePkg, calleeFuncName)
+		_ = callerReceiverName
+		_ = calleeFuncName
+		_ = callerFuncName
 		return nil
 	})
 
@@ -149,7 +152,25 @@ func (p *Program) getOrInstallFile(pkg *wdl.Package, fname string) *wdl.File {
 }
 
 // getTypeDef inserts (if not yet available) the denoted wdl type and returns it.
-func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, error) {
+func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef, e error) {
+	defer func() {
+		if res != nil {
+			// TODO not sure if we should instantiate generic types within the package or make them virtual?
+			if len(ref.Params) > 0 {
+				res = res.Clone()
+				var tmp []*wdl.ResolvedType
+				for _, param := range ref.Params {
+					rp, err := p.getTypeDef(pg, param)
+					if err != nil {
+						e = err
+						return
+					}
+					tmp = append(tmp, rp.AsResolvedType())
+				}
+				res.SetTypeParams(tmp)
+			}
+		}
+	}()
 
 	if ref.TypeParam {
 		// TODO not sure how to handle that. Seems not to make sense to put that into the package
@@ -158,25 +179,27 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 		}), nil
 	}
 
-	if ref.Qualifier == "std" {
-		switch ref.Name {
-		case "Slice":
-			orig := p.Program.MustResolveSimple("std", "Slice")
-			clone := wdl.NewStruct(func(strct *wdl.Struct) {
-				strct.SetPkg(orig.Pkg())
-				strct.SetName("Slice")
-			})
-			tp, err := p.getTypeDef(p.Program, ref.Params[0])
-			if err != nil {
-				return nil, err
+	/*
+		if ref.Qualifier == "std" {
+			switch ref.Name {
+			case "Slice":
+				orig := p.Program.MustResolveSimple("std", "Slice")
+				clone := wdl.NewStruct(func(strct *wdl.Struct) {
+					strct.SetPkg(orig.Pkg())
+					strct.SetName("Slice")
+				})
+				tp, err := p.getTypeDef(p.Program, ref.Params[0])
+				if err != nil {
+					return nil, err
+				}
+				clone.AddTypeParams(tp.AsResolvedType())
+				return clone, nil
 			}
-			clone.AddTypeParams(tp.AsResolvedType())
-			return clone, nil
-		}
-	}
+		}*/
 
 	// check short-circuit definition
 	if def, ok := pg.TypeDef(ref); ok {
+
 		return def, nil
 	}
 
@@ -206,8 +229,16 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 			continue
 		}
 
+		if _, isVar := object.(*types.Var); isVar {
+			continue
+		}
+
 		if ident.Name != string(ref.Name) {
 			continue
+		}
+		fmt.Println("source type:", srcPkg.PkgPath, ident.Name)
+		if object.Name() != ident.Name {
+			panic("wtf 1")
 		}
 
 		found = true
@@ -225,7 +256,12 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 		switch obj := objType.(type) {
 		case *types.Named:
 			namedObj := obj
+			_ = namedObj
 			name := obj.Obj().Name()
+
+			if namedObj.Obj().Name() != ident.Name {
+				//panic(fmt.Errorf("wtf 2 %v,%v", object, objType)) TODO fix me: this happens for alias
+			}
 			switch obj := obj.Underlying().(type) {
 			case *types.Interface:
 				// TODO how to distinguish between different use case of a Go interface (type constraint, actually an polymorphic interface etc)
@@ -305,11 +341,13 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 					}
 				}
 			case *types.Struct:
+
 				return wdl.NewStruct(func(strct *wdl.Struct) {
 					strct.SetName(wdl.Identifier(name))
 					dstPkg.AddTypeDefs(strct)
 					strct.SetPkg(dstPkg)
 					file.AddTypeDefs(strct)
+
 					for tpidx := range namedObj.TypeParams().Len() {
 						strct.AddTypeParams(wdl.NewResolvedType(func(rType *wdl.ResolvedType) {
 							tp := namedObj.TypeParams().At(tpidx)
@@ -318,6 +356,10 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 						}))
 					}
 
+					//fmt.Println("!!! CREATED struct", name, dstPkg.Qualifier())
+					if ref.Name.String() != name {
+						//panic(fmt.Errorf("WTF %s vs %s", ref.Name, name)) TODO fix me this happens for alias
+					}
 					if comment := dstPkg.TypeComments()[strct.Name()]; comment != nil {
 						strct.SetComment(comment.Lines())
 						strct.SetMacros(comment.Macros())
@@ -339,25 +381,45 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (wdl.TypeDef, er
 								field.PutTag("json", value)
 							}
 
-							what := f.Type()
-							if f.Origin() != nil {
-								what = f.Origin().Type() // TODO WTF we get random basic types like string for non-instantiated type params???
+							var args []types.Type
+							if pnamed, ok := f.Type().(*types.Named); ok {
+
+								if pnamed.TypeArgs().Len() > 0 {
+									// this is an instance, e.g. a string
+									for i := range pnamed.TypeArgs().Len() {
+										args = append(args, pnamed.TypeArgs().At(i))
+									}
+								} else {
+									// this is just a placeholder
+									for i := range pnamed.TypeParams().Len() {
+										args = append(args, pnamed.TypeArgs().At(i))
+									}
+								}
+
 							}
 
-							ref, err := p.createRef(what)
+							if f.Name() == "PreIcon" {
+								fmt.Println("got field")
+							}
+
+							ref, err := p.createRef(f.Type(), args...)
 							if err != nil {
-								slog.Error("error creating ref for field type", "type", what, "err", err)
+								slog.Error("error creating ref for field type", "type", f.Type(), "err", err)
 								return
 							}
 							ftype, err := p.getTypeDef(p.Program, ref)
 							if err != nil {
-								slog.Error("error getting def for field type", "type", what, "err", err)
+								slog.Error("error getting def for field type", "type", f.Type(), "err", err)
 								return
 							}
 
 							if ftype == nil {
-								slog.Error("oops with nil type for field type", "type", what)
+								slog.Error("oops with nil type for field type", "type", f.Type())
 								return
+							}
+
+							if f.Name() == "Caption" {
+								fmt.Println("!!!", ref)
 							}
 
 							field.SetTypeDef(ftype.AsResolvedType())
@@ -480,7 +542,20 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 	return nil, nil
 }
 
-func (p *Program) createRef(typ types.Type) (*wdl.TypeRef, error) {
+func (p *Program) createRef(typ types.Type, generics ...types.Type) (r *wdl.TypeRef, e error) {
+	defer func() {
+		if r != nil && len(generics) > 0 {
+			// post process generics for all variants, this something between elegant and ugly
+			for _, generic := range generics {
+				tp, err := p.createRef(generic)
+				if err != nil {
+					e = err
+					return
+				}
+				r.Params = append(r.Params, tp)
+			}
+		}
+	}()
 	switch t := typ.(type) {
 	case *types.TypeParam:
 		return &wdl.TypeRef{

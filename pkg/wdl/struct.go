@@ -73,6 +73,20 @@ type Struct struct {
 	typeParams []*ResolvedType
 }
 
+func (s *Struct) Clone() TypeDef {
+	return &Struct{
+		pkg:        s.pkg,
+		macros:     append([]*MacroInvocation{}, s.macros...),
+		comment:    append([]*CommentLine{}, s.comment...),
+		types:      append([]*ResolvedType{}, s.types...),
+		name:       s.name,
+		fields:     append([]*Field{}, s.fields...),
+		methods:    append([]*Func{}, s.methods...),
+		visibility: s.visibility,
+		typeParams: append([]*ResolvedType{}, s.typeParams...),
+	}
+}
+
 func (s *Struct) TypeParams() []*ResolvedType {
 	return s.typeParams
 }

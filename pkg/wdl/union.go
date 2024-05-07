@@ -1,12 +1,29 @@
 package wdl
 
 type Union struct {
-	pkg     *Package
-	macros  []*MacroInvocation
-	comment []*CommentLine
-	types   []*ResolvedType
-	name    Identifier
-	file    *File
+	pkg        *Package
+	macros     []*MacroInvocation
+	comment    []*CommentLine
+	types      []*ResolvedType
+	name       Identifier
+	file       *File
+	typeParams []*ResolvedType
+}
+
+func (u *Union) Clone() TypeDef {
+	return &Union{
+		pkg:        u.pkg,
+		macros:     append([]*MacroInvocation{}, u.macros...),
+		comment:    append([]*CommentLine{}, u.comment...),
+		types:      append([]*ResolvedType{}, u.typeParams...),
+		name:       u.name,
+		file:       u.file,
+		typeParams: append([]*ResolvedType{}, u.typeParams...),
+	}
+}
+
+func (u *Union) SetTypeParams(typeParams []*ResolvedType) {
+	u.typeParams = typeParams
 }
 
 func (u *Union) File() *File {

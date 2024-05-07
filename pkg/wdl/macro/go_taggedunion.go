@@ -242,10 +242,11 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 		file.AddTypeDefs(wdl.NewFunc(func(fn *wdl.Func) {
 			fn.SetName("Match" + uStruct.Name())
 			fn.SetVisibility(wdl.Public)
-			fn.AddTypeParams(wdl.NewParam(func(param *wdl.Param) {
-				param.SetName("R")
-				param.SetTypeDef(e.prog.MustResolveSimple("std", "any"))
+			fn.AddTypeParams(wdl.NewResolvedType(func(rType *wdl.ResolvedType) {
+				rType.SetName("R")
+				rType.SetTypeDef(e.prog.MustResolveSimple("std", "any").TypeDef())
 			}))
+
 			fn.AddResults(wdl.NewParam(func(param *wdl.Param) {
 				param.SetName("R")
 			}))

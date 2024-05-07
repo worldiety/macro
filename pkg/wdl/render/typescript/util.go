@@ -31,7 +31,7 @@ func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 		case wdl.TAny:
 			return "any"
 		case wdl.TBool:
-			return "bool"
+			return "boolean"
 		case wdl.TByte:
 			return "byte"
 		default:
@@ -65,9 +65,11 @@ func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 		tmp := rtype.Name().String()
 		if len(rtype.Params()) > 0 {
 			tmp += "<"
-			for _, resolvedType := range rtype.Params() {
+			for i, resolvedType := range rtype.Params() {
 				tmp += r.TsType(resolvedType)
-				tmp += ","
+				if i != len(rtype.Params())-1 {
+					tmp += ","
+				}
 			}
 			tmp += ">"
 		}

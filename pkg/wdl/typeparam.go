@@ -5,6 +5,17 @@ type TypeParam struct {
 	pkg  *Package
 }
 
+func (t *TypeParam) Clone() TypeDef {
+	return &TypeParam{
+		name: t.name,
+		pkg:  t.pkg,
+	}
+}
+
+func (t *TypeParam) SetTypeParams(typeParams []*ResolvedType) {
+	panic("adding type params to type params is not possible")
+}
+
 func NewTypeParam(with func(tParm *TypeParam)) *TypeParam {
 	t := &TypeParam{}
 	if with != nil {

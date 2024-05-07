@@ -9,4 +9,6 @@ type TypeDef interface {
 	Name() Identifier
 	AsResolvedType() *ResolvedType
 	Macros() []*MacroInvocation
+	Clone() TypeDef
+	SetTypeParams(typeParams []*ResolvedType)
 }
