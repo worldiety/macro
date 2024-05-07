@@ -52,6 +52,7 @@ func (e *Engine) Emit() error {
 		for _, pkg := range e.prog.Packages() {
 			var tmp []*wdl.File
 			aggregatedFile := wdl.NewFile(nil)
+			aggregatedFile.SetMimeType(wdl.MimeTypeGo)
 			for _, file := range pkg.Files() {
 				if file.Modified() && file.Generated() && file.MimeType() == wdl.MimeTypeGo {
 					aggregatedFile.Import(file)

@@ -18,6 +18,9 @@ func NewRFile(parent *Renderer, pkg wdl.PkgImportQualifier) *RFile {
 }
 
 func (r *RFile) Use(rtype *wdl.ResolvedType) *wdl.ResolvedType {
+	if rtype.TypeParam() {
+		return rtype
+	}
 	if rtype.Pkg() == nil {
 		panic(fmt.Errorf("type %#v has empty package", rtype))
 	}

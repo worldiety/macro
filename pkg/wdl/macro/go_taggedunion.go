@@ -244,6 +244,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 			fn.SetVisibility(wdl.Public)
 			fn.AddTypeParams(wdl.NewResolvedType(func(rType *wdl.ResolvedType) {
 				rType.SetName("R")
+				rType.SetTypeParam(true)
 				rType.SetTypeDef(e.prog.MustResolveSimple("std", "any").TypeDef())
 			}))
 
