@@ -21,7 +21,20 @@ type goTaggedUnionParams struct {
 	Names              []string `json:"names"`
 }
 
-func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation) error {
+type GoTaggedUnion struct {
+	prog     *wdl.Program
+	preamble string
+}
+
+func NewGoTaggedUnion(prog *wdl.Program, preamble string) *GoTaggedUnion {
+	return &GoTaggedUnion{prog: prog, preamble: preamble}
+}
+
+func (m *GoTaggedUnion) Names() []wdl.MacroName {
+	return []wdl.MacroName{"go.TaggedUnion"}
+}
+
+func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation) error {
 	if _, ok := def.(*wdl.Interface); ok {
 		// TODO this case happens, cannot decide properly if that is correct or wrong
 		return nil
@@ -60,11 +73,11 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 		strct.AddFields(
 			wdl.NewField(func(field *wdl.Field) {
 				field.SetName("ordinal")
-				field.SetTypeDef(e.prog.MustResolveSimple("std", "int"))
+				field.SetTypeDef(m.prog.MustResolveSimple("std", "int"))
 			}),
 			wdl.NewField(func(field *wdl.Field) {
 				field.SetName("value")
-				field.SetTypeDef(e.prog.MustResolveSimple("std", "any"))
+				field.SetTypeDef(m.prog.MustResolveSimple("std", "any"))
 			}),
 		)
 
@@ -78,7 +91,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 				fn.SetName("Unwrap")
 				fn.AddResults(
 					wdl.NewParam(func(param *wdl.Param) {
-						param.SetTypeDef(e.prog.MustResolveSimple("std", "any"))
+						param.SetTypeDef(m.prog.MustResolveSimple("std", "any"))
 					}),
 				)
 				fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
@@ -95,7 +108,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 				fn.SetName("Ordinal")
 				fn.AddResults(
 					wdl.NewParam(func(param *wdl.Param) {
-						param.SetTypeDef(e.prog.MustResolveSimple("std", "int"))
+						param.SetTypeDef(m.prog.MustResolveSimple("std", "int"))
 					}),
 				)
 				fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
@@ -112,7 +125,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 				fn.SetName("Valid")
 				fn.AddResults(
 					wdl.NewParam(func(param *wdl.Param) {
-						param.SetTypeDef(e.prog.MustResolveSimple("std", "bool"))
+						param.SetTypeDef(m.prog.MustResolveSimple("std", "bool"))
 					}),
 				)
 				fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
@@ -127,7 +140,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 				}))
 				fn.SetVisibility(wdl.Public)
 				fn.SetName("Switch")
-				fn.SetComment(wdl.NewSimpleComment("Switch provides an exhaustive and type safe closure callback mechanic. Nil callbacks are allowed. Unmatched branches are delegated into a default case.").Lines())
+				fn.SetComment(wdl.NewSimpleComment("Switch provides an exhaustive and type safe closure callback mechanic. Nil callbacks are allowed. Unmatched branches are delegated into a default case."))
 				for _, resolvedType := range union.Types() {
 					fn.AddArgs(
 						wdl.NewParam(func(param *wdl.Param) {
@@ -147,7 +160,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 					param.SetTypeDef(wdl.NewFunc(func(fn *wdl.Func) {
 						fn.SetPkg(union.Pkg())
 						fn.AddArgs(wdl.NewParam(func(param *wdl.Param) {
-							param.SetTypeDef(e.prog.MustResolveSimple("std", "any"))
+							param.SetTypeDef(m.prog.MustResolveSimple("std", "any"))
 						}))
 					}).AsResolvedType())
 				}))
@@ -187,7 +200,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 							param.SetTypeDef(resolvedType)
 						}),
 						wdl.NewParam(func(param *wdl.Param) {
-							param.SetTypeDef(e.prog.MustResolveSimple("std", "bool"))
+							param.SetTypeDef(m.prog.MustResolveSimple("std", "bool"))
 						}),
 					)
 					fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
@@ -231,7 +244,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 		file.SetGenerated(true)
 		file.SetPreamble(wdl.NewComment(func(comment *wdl.Comment) {
 			comment.AddLines(wdl.NewCommentLine(func(line *wdl.CommentLine) {
-				line.SetText(e.preamble)
+				line.SetText(m.preamble)
 			}))
 		}))
 
@@ -239,7 +252,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 			dType.SetName("_")
 			dType.SetPkg(file.Pkg())
 			dType.SetUnderlying(def.AsResolvedType().TypeDef())
-			dType.SetComment(wdl.NewSimpleComment(fmt.Sprintf("This variable is declared to let linters know, that [%s] is used at compile time to generate [%s].", def.Name(), uStruct.Name())).Lines())
+			dType.SetComment(wdl.NewSimpleComment(fmt.Sprintf("This variable is declared to let linters know, that [%s] is used at compile time to generate [%s].", def.Name(), uStruct.Name())))
 		}))
 		file.AddTypeDefs(uStruct)
 
@@ -250,7 +263,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 			fn.AddTypeParams(wdl.NewResolvedType(func(rType *wdl.ResolvedType) {
 				rType.SetName("R")
 				rType.SetTypeParam(true)
-				rType.SetTypeDef(e.prog.MustResolveSimple("std", "any").TypeDef())
+				rType.SetTypeDef(m.prog.MustResolveSimple("std", "any").TypeDef())
 			}))
 
 			fn.AddResults(wdl.NewParam(func(param *wdl.Param) {
@@ -284,7 +297,7 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 				param.SetTypeDef(wdl.NewFunc(func(fn *wdl.Func) {
 					fn.SetPkg(union.Pkg())
 					fn.AddArgs(wdl.NewParam(func(param *wdl.Param) {
-						param.SetTypeDef(e.prog.MustResolveSimple("std", "any"))
+						param.SetTypeDef(m.prog.MustResolveSimple("std", "any"))
 					}))
 					fn.AddResults(wdl.NewParam(func(param *wdl.Param) {
 						param.SetName("R")
@@ -315,9 +328,9 @@ func (e *Engine) goTaggedUnion(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 
 	switch opts.JSONRepresentation {
 	case internallyTagged:
-		e.goTaggedUnionJSONInternallyTagged(opts, union, uStruct, opts.TagName)
+		m.goTaggedUnionJSONInternallyTagged(opts, union, uStruct, opts.TagName)
 	case adjacentTagged:
-		e.goTaggedUnionJSONAdjacentlyTagged(opts, union, uStruct)
+		m.goTaggedUnionJSONAdjacentlyTagged(opts, union, uStruct)
 	default:
 		return fmt.Errorf("no such json tag variant supported: %s", opts.JSONRepresentation)
 	}

@@ -113,6 +113,15 @@ func (p *Program) init() error {
 		for _, syntax := range pkg.Syntax {
 			for _, decl := range syntax.Decls {
 				switch t := decl.(type) {
+				case *ast.FuncDecl:
+					_, err := p.getTypeDef(p.Program, &wdl.TypeRef{
+						Qualifier: wdl.PkgImportQualifier(pkg.PkgPath),
+						Name:      wdl.Identifier(t.Name.Name),
+					})
+
+					if err != nil {
+						return err
+					}
 				case *ast.GenDecl:
 					for _, spec := range t.Specs {
 						switch spec := spec.(type) {
@@ -277,8 +286,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 
 					iface.SetName(wdl.Identifier(name))
 					if comment := dstPkg.TypeComments()[iface.Name()]; comment != nil {
-						iface.SetComment(comment.Lines())
-						iface.SetMacros(comment.Macros())
+						iface.SetComment(comment)
 					}
 				})
 
@@ -296,8 +304,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 							fn.SetName(wdl.Identifier(method.Name()))
 							// TODO this is not possible for iface methods and even wrong for global funcs
 							if comment := dstPkg.TypeComments()[fn.Name()]; comment != nil {
-								fn.SetComment(comment.Lines())
-								fn.SetMacros(comment.Macros())
+								fn.SetComment(comment)
 							}
 						}))
 					}
@@ -318,8 +325,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 
 							union.SetName(wdl.Identifier(name))
 							if comment := dstPkg.TypeComments()[union.Name()]; comment != nil {
-								union.SetComment(comment.Lines())
-								union.SetMacros(comment.Macros())
+								union.SetComment(comment)
 							}
 
 							for i := 0; i < obj.Len(); i++ {
@@ -344,6 +350,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 						return union, nil
 					}
 				}
+
 			case *types.Struct:
 
 				return wdl.NewStruct(func(strct *wdl.Struct) {
@@ -365,8 +372,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 						//panic(fmt.Errorf("WTF %s vs %s", ref.Name, name)) TODO fix me this happens for alias
 					}
 					if comment := dstPkg.TypeComments()[strct.Name()]; comment != nil {
-						strct.SetComment(comment.Lines())
-						strct.SetMacros(comment.Macros())
+						strct.SetComment(comment)
 					}
 
 					for fidx := range obj.NumFields() {
@@ -449,30 +455,54 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 			}
 
 		case *types.Pointer:
-			/* TODO this cannot work because we are not using the wdl ref correctly
-			switch elem := obj.Elem().(type) {
-			case *types.Named:
+		/* TODO this cannot work because we are not using the wdl ref correctly
+		switch elem := obj.Elem().(type) {
+		case *types.Named:
 
-				path := ""
-				if elem.Obj().Pkg() != nil {
-					path = elem.Obj().Pkg().Path()
-				}
-
-				def, err := p.getTypeDef(p.Program, &wdl.TypeRef{
-					Qualifier: wdl.PkgImportQualifier(path),
-					Name:      wdl.Identifier(elem.Obj().Name()),
-				})
-
-				if err != nil {
-					return nil, err
-				}
-				return wdl.NewMutPtr(func(ptr *wdl.MutPtr) {
-					ptr.SetTypeDef(def)
-				}), nil
+			path := ""
+			if elem.Obj().Pkg() != nil {
+				path = elem.Obj().Pkg().Path()
 			}
-			fmt.Printf("%T", obj.Elem())
-			*/
-			//asobj.Elem()
+
+			def, err := p.getTypeDef(p.Program, &wdl.TypeRef{
+				Qualifier: wdl.PkgImportQualifier(path),
+				Name:      wdl.Identifier(elem.Obj().Name()),
+			})
+
+			if err != nil {
+				return nil, err
+			}
+			return wdl.NewMutPtr(func(ptr *wdl.MutPtr) {
+				ptr.SetTypeDef(def)
+			}), nil
+		}
+		fmt.Printf("%T", obj.Elem())
+		*/
+		//asobj.Elem()
+		case *types.Signature:
+			return wdl.NewFunc(func(fn *wdl.Func) {
+				fn.SetName(ref.Name)
+				dstPkg.AddTypeDefs(fn)
+				fn.SetPkg(dstPkg)
+				file.AddTypeDefs(fn)
+
+				for tpidx := range obj.TypeParams().Len() {
+					fn.AddTypeParams(wdl.NewResolvedType(func(rType *wdl.ResolvedType) {
+						tp := obj.TypeParams().At(tpidx)
+						rType.SetTypeParam(true)
+						rType.SetName(wdl.Identifier(tp.Obj().Name()))
+					}))
+				}
+
+				if comment := dstPkg.TypeComments()[fn.Name()]; comment != nil {
+					fn.SetComment(comment)
+				}
+
+				for i := range obj.Params().Len() {
+					param := obj.Params().At(i)
+					_ = param // TODO consolidate conversion code of struct fields, (generic) method receivers and this stuff
+				}
+			}), nil
 		default:
 			slog.Error(fmt.Sprintf("type not implemented %T@%v", obj, objPos))
 		}
@@ -493,8 +523,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "bool").TypeDef())
 
 			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
-				dType.SetComment(comment.Lines())
-				dType.SetMacros(comment.Macros())
+				dType.SetComment(comment)
 			}
 		}), nil
 	case types.String:
@@ -505,8 +534,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "string").TypeDef())
 
 			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
-				dType.SetComment(comment.Lines())
-				dType.SetMacros(comment.Macros())
+				dType.SetComment(comment)
 			}
 		}), nil
 
@@ -518,8 +546,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int").TypeDef())
 
 			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
-				dType.SetComment(comment.Lines())
-				dType.SetMacros(comment.Macros())
+				dType.SetComment(comment)
 			}
 		}), nil
 	case types.Int32:
@@ -530,8 +557,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int32").TypeDef())
 
 			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
-				dType.SetComment(comment.Lines())
-				dType.SetMacros(comment.Macros())
+				dType.SetComment(comment)
 			}
 		}), nil
 	case types.Int64:
@@ -542,8 +568,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int64").TypeDef())
 
 			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
-				dType.SetComment(comment.Lines())
-				dType.SetMacros(comment.Macros())
+				dType.SetComment(comment)
 			}
 		}), nil
 	}

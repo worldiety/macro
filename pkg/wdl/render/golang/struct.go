@@ -8,7 +8,7 @@ import (
 func (r *RFile) renderStruct(def *wdl.Struct, w *render.Writer) error {
 
 	r.parent.writeCommentNode(w, false, "", wdl.NewComment(func(comment *wdl.Comment) {
-		comment.SetLines(def.Comment())
+		comment.SetLines(def.Comment().Lines())
 	}))
 	w.Printf("type %s struct {\n", goAccessorName(def))
 	for _, field := range def.Fields() {

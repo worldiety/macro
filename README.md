@@ -39,7 +39,7 @@ Consider some source code like
 // A Component is a sum type or tagged union.
 // Actually, we can generate different flavors, so that Go makes fun for modelling business stuff.
 //
-// #[go.TaggedUnion "json":"intern", "tag":"type"]
+// #[go.TaggedUnion "json":"internal", "tag":"type"]
 type _Component interface {
 	Button | TextField | Text | Chapter | xcompo.RichText | xcompo.Icon | string | []string | []Text
 }
@@ -170,3 +170,49 @@ export interface Property<T> {
     v /*Value*/: T;
 }
 ```
+
+## markdown domain-driven documentation generator
+You can simply annotate your functions and types with a bunch of macro annotations to enrich your model with more characteristics.
+Then you can emit a structured glossary based on your source code comments, so that your documentation is always up-to-date and your customer and project owner is surprised and happy.
+
+To create the document, start with the markdown root annotation, e.g. at your main function.
+Actually, that does not matter currently.
+
+```go
+// #[markdown]
+func main() {
+	//...
+}
+```
+
+The continue by annotating your bounded context packages.
+Note, that you can always define an optional human readable alias name.
+
+```go
+// Package domain enthält den Bounded Context über die Zeiterfassung.
+// #[@BoundedContext "Zeiterfassungsmanagement"]
+package domain
+
+//...
+```
+
+Inside your bounded context package annotate your domain-driven types.
+Types without a bounded context are not documented, thus annotate your shared kernel or supporting context just as a regular bounded context.
+Here is an example for documenting a use case.
+```go
+// Cooles Zeitbuchen ist angesagt.
+// #[@Usecase]
+func (z *Zeiterfassung) ZeitBuchen(user User, mitarbeiter Mitarbeiter, dauer time.Duration) error {
+//...
+}
+```
+
+The following annotations are available:
+* @Entity
+* @Aggregate
+* @Value
+* @DomainEvent
+* @Usecase
+* @Repository
+* @BoundedContext
+* @DomainService

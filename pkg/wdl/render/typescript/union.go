@@ -8,7 +8,7 @@ import (
 func (r *RFile) renderUnion(def *wdl.Union, w *render.Writer) error {
 
 	r.parent.writeCommentNode(w, false, "", 0, wdl.NewComment(func(comment *wdl.Comment) {
-		comment.SetLines(def.Comment())
+		comment.SetLines(def.Comment().Lines())
 	}))
 	w.Printf("export type %s = \n", tsUpperName(def))
 

@@ -82,6 +82,6 @@ func (b *BaseType) AsResolvedType() *ResolvedType {
 	})
 }
 
-func (b *BaseType) Macros() []*MacroInvocation {
+func (b *BaseType) Comment() *Comment {
 	return nil
 }

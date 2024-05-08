@@ -8,7 +8,8 @@ type TypeDef interface {
 	typeDef()
 	Name() Identifier
 	AsResolvedType() *ResolvedType
-	Macros() []*MacroInvocation
+	Comment() *Comment
 	Clone() TypeDef
 	SetTypeParams(typeParams []*ResolvedType)
+	Pkg() *Package
 }

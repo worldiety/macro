@@ -52,6 +52,6 @@ func (t *TypeParam) AsResolvedType() *ResolvedType {
 	})
 }
 
-func (t *TypeParam) Macros() []*MacroInvocation {
+func (t *TypeParam) Comment() *Comment {
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// #[markdown]
 func main() {
 	var repo domain.ZeitlogRepo
 	if time.Now().UnixMilli()%10 == 0 {

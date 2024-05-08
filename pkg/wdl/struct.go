@@ -72,22 +72,20 @@ func (f *Field) SetTypeDef(typeDef *ResolvedType) {
 
 type Struct struct {
 	pkg        *Package
-	macros     []*MacroInvocation
-	comment    []*CommentLine
 	types      []*ResolvedType // composition?
 	name       Identifier
 	fields     []*Field
 	methods    []*Func
 	visibility Visibility
 	typeParams []*ResolvedType
+	comment    *Comment
 }
 
 func (s *Struct) Clone() TypeDef {
 	return &Struct{
 		pkg:        s.pkg,
-		macros:     append([]*MacroInvocation{}, s.macros...),
-		comment:    append([]*CommentLine{}, s.comment...),
 		types:      append([]*ResolvedType{}, s.types...),
+		comment:    s.comment,
 		name:       s.name,
 		fields:     append([]*Field{}, s.fields...),
 		methods:    append([]*Func{}, s.methods...),
@@ -145,19 +143,11 @@ func (s *Struct) SetPkg(pkg *Package) {
 	s.pkg = pkg
 }
 
-func (s *Struct) Macros() []*MacroInvocation {
-	return s.macros
-}
-
-func (s *Struct) SetMacros(macros []*MacroInvocation) {
-	s.macros = macros
-}
-
-func (s *Struct) Comment() []*CommentLine {
+func (s *Struct) Comment() *Comment {
 	return s.comment
 }
 
-func (s *Struct) SetComment(comment []*CommentLine) {
+func (s *Struct) SetComment(comment *Comment) {
 	s.comment = comment
 }
 

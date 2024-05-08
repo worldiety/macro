@@ -1,5 +1,7 @@
 package wdl
 
+import "maps"
+
 // A PkgName is the identifier of a package. Examples:
 //   - Go: http, ast2, math (this has nothing to do with last segment of the import path)
 //   - Java: util, collections (always the last segment)
@@ -22,6 +24,41 @@ type Package struct {
 	typeComments map[Identifier]*Comment
 	comment      *Comment
 	files        []*File
+}
+
+func (p *Package) Pkg() *Package {
+	return p
+}
+
+func (p *Package) typeDef() {
+}
+
+func (p *Package) AsResolvedType() *ResolvedType {
+	panic("package is a fake type")
+}
+
+func (p *Package) Macros() []*MacroInvocation {
+	if p.comment != nil {
+		return p.comment.Macros()
+	}
+
+	return nil
+}
+
+func (p *Package) Clone() TypeDef {
+	return &Package{
+		name:         p.name,
+		qualifier:    p.qualifier,
+		typeDefs:     append([]TypeDef(nil), p.typeDefs...),
+		typeComments: maps.Clone(p.typeComments),
+		comment:      p.comment,
+		files:        append([]*File{}, p.files...),
+	}
+}
+
+func (p *Package) SetTypeParams(typeParams []*ResolvedType) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (p *Package) Files() []*File {

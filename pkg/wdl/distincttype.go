@@ -4,8 +4,7 @@ import "slices"
 
 type DistinctType struct {
 	pkg        *Package
-	macros     []*MacroInvocation
-	comment    []*CommentLine
+	comment    *Comment
 	types      []*ResolvedType
 	name       Identifier
 	visibility Visibility
@@ -17,8 +16,7 @@ type DistinctType struct {
 func (d *DistinctType) Clone() TypeDef {
 	return &DistinctType{
 		pkg:        d.pkg,
-		macros:     append([]*MacroInvocation{}, d.macros...),
-		comment:    append([]*CommentLine{}, d.comment...),
+		comment:    d.comment,
 		types:      append([]*ResolvedType{}, d.types...),
 		name:       d.name,
 		visibility: d.visibility,
@@ -56,19 +54,11 @@ func (d *DistinctType) SetPkg(pkg *Package) {
 	d.pkg = pkg
 }
 
-func (d *DistinctType) Macros() []*MacroInvocation {
-	return d.macros
-}
-
-func (d *DistinctType) SetMacros(macros []*MacroInvocation) {
-	d.macros = macros
-}
-
-func (d *DistinctType) Comment() []*CommentLine {
+func (d *DistinctType) Comment() *Comment {
 	return d.comment
 }
 
-func (d *DistinctType) SetComment(comment []*CommentLine) {
+func (d *DistinctType) SetComment(comment *Comment) {
 	d.comment = comment
 }
 

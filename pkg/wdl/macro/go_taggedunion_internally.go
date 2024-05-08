@@ -8,19 +8,19 @@ import (
 )
 
 // see also https://serde.rs/enum-representations.html#internally-tagged
-func (e *Engine) goTaggedUnionJSONInternallyTagged(opts goTaggedUnionParams, union *wdl.Union, uStruct *wdl.Struct, tagAttrName string) {
+func (m *GoTaggedUnion) goTaggedUnionJSONInternallyTagged(opts goTaggedUnionParams, union *wdl.Union, uStruct *wdl.Struct, tagAttrName string) {
 	uStruct.AddMethods(
 		wdl.NewFunc(func(fn *wdl.Func) {
 			fn.SetName("MarshalJSON")
 			fn.SetVisibility(wdl.Public)
 			fn.AddResults(
 				wdl.NewParam(func(param *wdl.Param) {
-					slice := e.prog.MustResolveSimple("std", "Slice")
-					slice.AddParams(e.prog.MustResolveSimple("std", "byte"))
+					slice := m.prog.MustResolveSimple("std", "Slice")
+					slice.AddParams(m.prog.MustResolveSimple("std", "byte"))
 					param.SetTypeDef(slice)
 				}),
 				wdl.NewParam(func(param *wdl.Param) {
-					param.SetTypeDef(e.prog.MustResolveSimple("std", "error"))
+					param.SetTypeDef(m.prog.MustResolveSimple("std", "error"))
 				}),
 			)
 			fn.SetReceiver(wdl.NewParam(func(r *wdl.Param) {
@@ -64,15 +64,15 @@ buf= append(buf[1:], prefix...)
 			fn.SetVisibility(wdl.Public)
 			fn.AddArgs(
 				wdl.NewParam(func(param *wdl.Param) {
-					slice := e.prog.MustResolveSimple("std", "Slice")
-					slice.AddParams(e.prog.MustResolveSimple("std", "byte"))
+					slice := m.prog.MustResolveSimple("std", "Slice")
+					slice.AddParams(m.prog.MustResolveSimple("std", "byte"))
 					param.SetTypeDef(slice)
 					param.SetName("bytes")
 				}),
 			)
 			fn.AddResults(
 				wdl.NewParam(func(param *wdl.Param) {
-					param.SetTypeDef(e.prog.MustResolveSimple("std", "error"))
+					param.SetTypeDef(m.prog.MustResolveSimple("std", "error"))
 				}),
 			)
 			fn.SetReceiver(wdl.NewParam(func(r *wdl.Param) {

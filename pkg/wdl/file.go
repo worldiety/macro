@@ -7,6 +7,7 @@ type MimeType string
 const (
 	MimeTypeGo         MimeType = "text/x-go-source"
 	MimeTypeTypeScript MimeType = "text/x-typescript-source"
+	Raw                MimeType = "binary"
 )
 
 // File represents a physical source code file respective compilation unit.
@@ -26,6 +27,15 @@ type File struct {
 	generated bool
 	imports   map[Identifier]PkgImportQualifier
 	mimeType  MimeType
+	rawBytes  []byte
+}
+
+func (f *File) RawBytes() []byte {
+	return f.rawBytes
+}
+
+func (f *File) SetRawBytes(rawBytes []byte) {
+	f.rawBytes = rawBytes
 }
 
 func (f *File) MimeType() MimeType {

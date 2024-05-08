@@ -19,6 +19,9 @@ func (c *Comment) String() string {
 }
 
 func (c *Comment) Macros() []*MacroInvocation {
+	if c == nil {
+		return nil
+	}
 	return c.macros
 }
 
@@ -31,6 +34,9 @@ func (c *Comment) AddMacros(macros ...*MacroInvocation) {
 }
 
 func (c *Comment) Lines() []*CommentLine {
+	if c == nil {
+		return nil
+	}
 	return c.lines
 }
 

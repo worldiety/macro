@@ -67,22 +67,20 @@ type Statement interface {
 type Func struct {
 	pkg        *Package
 	name       Identifier
-	macros     []*MacroInvocation
-	comment    []*CommentLine
 	args       []*Param
 	results    []*Param
 	typeParams []*ResolvedType
 	receiver   *Param
 	visibility Visibility
 	body       *Block
+	comment    *Comment
 }
 
 func (f *Func) Clone() TypeDef {
 	return &Func{
 		pkg:        f.pkg,
 		name:       f.name,
-		macros:     append([]*MacroInvocation{}, f.macros...),
-		comment:    append([]*CommentLine{}, f.comment...),
+		comment:    f.comment,
 		args:       append([]*Param{}, f.args...),
 		results:    append([]*Param{}, f.results...),
 		typeParams: append([]*ResolvedType{}, f.typeParams...),
@@ -157,19 +155,11 @@ func (f *Func) SetName(name Identifier) {
 	f.name = name
 }
 
-func (f *Func) Macros() []*MacroInvocation {
-	return f.macros
-}
-
-func (f *Func) SetMacros(macros []*MacroInvocation) {
-	f.macros = macros
-}
-
-func (f *Func) Comment() []*CommentLine {
+func (f *Func) Comment() *Comment {
 	return f.comment
 }
 
-func (f *Func) SetComment(comment []*CommentLine) {
+func (f *Func) SetComment(comment *Comment) {
 	f.comment = comment
 }
 

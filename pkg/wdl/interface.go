@@ -3,18 +3,16 @@ package wdl
 type Interface struct {
 	pkg        *Package
 	name       Identifier
-	macros     []*MacroInvocation
-	comment    []*CommentLine
 	types      []*ResolvedType // todo is this also union types?
 	typeParams []*ResolvedType
+	comment    *Comment
 }
 
 func (u *Interface) Clone() TypeDef {
 	return &Interface{
 		pkg:        u.pkg,
 		name:       u.name,
-		macros:     append([]*MacroInvocation{}, u.macros...),
-		comment:    append([]*CommentLine{}, u.comment...),
+		comment:    u.comment,
 		types:      append([]*ResolvedType{}, u.types...),
 		typeParams: append([]*ResolvedType{}, u.typeParams...),
 	}
@@ -70,22 +68,10 @@ func NewInterface(with func(iface *Interface)) *Interface {
 
 func (u *Interface) typeDef() {}
 
-func (u *Interface) Macros() []*MacroInvocation {
-	return u.macros
-}
-
-func (u *Interface) AddMacro(macro *MacroInvocation) {
-	u.macros = append(u.macros, macro)
-}
-
-func (u *Interface) SetMacros(macro []*MacroInvocation) {
-	u.macros = macro
-}
-
-func (u *Interface) Comment() []*CommentLine {
+func (u *Interface) Comment() *Comment {
 	return u.comment
 }
 
-func (u *Interface) SetComment(comment []*CommentLine) {
+func (u *Interface) SetComment(comment *Comment) {
 	u.comment = comment
 }

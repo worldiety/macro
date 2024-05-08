@@ -8,7 +8,7 @@ import (
 func (r *RFile) renderDistinctType(def *wdl.DistinctType, w *render.Writer) error {
 
 	r.parent.writeCommentNode(w, false, "", wdl.NewComment(func(comment *wdl.Comment) {
-		comment.SetLines(def.Comment())
+		comment.SetLines(def.Comment().Lines())
 	}))
 	decl := r.GoType(def.Underlying().AsResolvedType())
 	w.Printf("type %s %s \n", goAccessorName(def), decl)

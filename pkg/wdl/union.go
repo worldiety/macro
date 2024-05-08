@@ -2,13 +2,12 @@ package wdl
 
 type Union struct {
 	pkg        *Package
-	macros     []*MacroInvocation
-	comment    []*CommentLine
 	types      []*ResolvedType
 	name       Identifier
 	file       *File
 	typeParams []*ResolvedType
 	visibility Visibility
+	comment    *Comment
 }
 
 func (u *Union) Visibility() Visibility {
@@ -22,8 +21,7 @@ func (u *Union) SetVisibility(visibility Visibility) {
 func (u *Union) Clone() TypeDef {
 	return &Union{
 		pkg:        u.pkg,
-		macros:     append([]*MacroInvocation{}, u.macros...),
-		comment:    append([]*CommentLine{}, u.comment...),
+		comment:    u.comment,
 		types:      append([]*ResolvedType{}, u.typeParams...),
 		name:       u.name,
 		file:       u.file,
@@ -89,22 +87,10 @@ func NewUnion(with func(union *Union)) *Union {
 
 func (u *Union) typeDef() {}
 
-func (u *Union) Macros() []*MacroInvocation {
-	return u.macros
-}
-
-func (u *Union) AddMacro(macro *MacroInvocation) {
-	u.macros = append(u.macros, macro)
-}
-
-func (u *Union) SetMacros(macro []*MacroInvocation) {
-	u.macros = macro
-}
-
-func (u *Union) Comment() []*CommentLine {
+func (u *Union) Comment() *Comment {
 	return u.comment
 }
 
-func (u *Union) SetComment(comment []*CommentLine) {
+func (u *Union) SetComment(comment *Comment) {
 	u.comment = comment
 }

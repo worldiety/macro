@@ -14,7 +14,13 @@ func makeIdentComments(pkg *packages.Package) (map[wdl.Identifier]*wdl.Comment, 
 	for _, syntax := range pkg.Syntax {
 	nextDeclr:
 		for _, decl := range syntax.Decls {
-			if decl, ok := decl.(*ast.GenDecl); ok {
+			switch decl := decl.(type) {
+			case *ast.FuncDecl:
+				if decl.Doc != nil {
+					typeDeclrComments[decl.Name.Name] = decl.Doc
+					continue nextDeclr
+				}
+			case *ast.GenDecl:
 				if decl.Doc != nil {
 					for _, spec := range decl.Specs {
 						if spec, ok := spec.(*ast.TypeSpec); ok {
@@ -38,8 +44,8 @@ func makeIdentComments(pkg *packages.Package) (map[wdl.Identifier]*wdl.Comment, 
 					}
 
 				}
-
 			}
+
 		}
 	}
 

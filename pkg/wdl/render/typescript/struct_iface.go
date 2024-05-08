@@ -8,7 +8,7 @@ import (
 func (r *RFile) renderStructIface(def *wdl.Struct, w *render.Writer) error {
 
 	r.parent.writeCommentNode(w, false, "", 0, wdl.NewComment(func(comment *wdl.Comment) {
-		comment.SetLines(def.Comment())
+		comment.SetLines(def.Comment().Lines())
 	}))
 	w.Printf("export interface %s", tsUpperName(def))
 	if len(def.TypeParams()) > 0 {

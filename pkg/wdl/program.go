@@ -3,9 +3,22 @@ package wdl
 import "fmt"
 
 type Program struct {
-	packages []*Package
-	std      *Package
-	path     string
+	packages    []*Package
+	std         *Package
+	path        string
+	annotations []Annotation
+}
+
+func (p *Program) Annotations() []Annotation {
+	return p.annotations
+}
+
+func (p *Program) SetAnnotations(annotations []Annotation) {
+	p.annotations = annotations
+}
+
+func (p *Program) AddAnnotations(annotations ...Annotation) {
+	p.annotations = append(p.annotations, annotations...)
 }
 
 func (p *Program) Path() string {
