@@ -175,8 +175,10 @@ export interface Property<T> {
 You can simply annotate your functions and types with a bunch of macro annotations to enrich your model with more characteristics.
 Then you can emit a structured glossary based on your source code comments, so that your documentation is always up-to-date and your customer and project owner is surprised and happy.
 
+See the generated [example](https://github.com/worldiety/macro/blob/main/testdata/example/README.md).
+
 To create the document, start with the markdown root annotation, e.g. at your main function.
-Actually, that does not matter currently.
+Currently, the location does not matter but keep it there for future compatibility.
 
 ```go
 // #[markdown]
@@ -185,8 +187,8 @@ func main() {
 }
 ```
 
-The continue by annotating your bounded context packages.
-Note, that you can always define an optional human readable alias name.
+Then continue by annotating your bounded context packages.
+Note, that you can always define an optional human readable alias name for any of defined annotations below.
 
 ```go
 // Package domain enthält den Bounded Context über die Zeiterfassung.
@@ -207,7 +209,7 @@ func (z *Zeiterfassung) ZeitBuchen(user User, mitarbeiter Mitarbeiter, dauer tim
 }
 ```
 
-The following annotations are available:
+The following annotations are available and inspected:
 * @Entity
 * @Aggregate
 * @Value
