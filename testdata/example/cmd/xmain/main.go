@@ -18,4 +18,12 @@ func main() {
 	}
 	service := domain.NewZeiterfassung(repo)
 	service.ZeitBuchen(supporting.User{}, domain.Mitarbeiter{}, 12)
+	domain.Aufstehen(NagoAuditor{})
+}
+
+type NagoAuditor struct {
+}
+
+func (n NagoAuditor) Audit(s string) error {
+	panic("implement me")
 }

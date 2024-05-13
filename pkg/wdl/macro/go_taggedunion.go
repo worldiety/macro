@@ -94,9 +94,9 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 						param.SetTypeDef(m.prog.MustResolveSimple("std", "any"))
 					}),
 				)
-				fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
+				fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
 
-					blk.AddStatements(wdl.RawStmt(fmt.Sprintf("return e.value")))
+					blk.Add(wdl.RawStmt(fmt.Sprintf("return e.value")))
 				}))
 			}),
 			wdl.NewFunc(func(fn *wdl.Func) {
@@ -111,9 +111,9 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 						param.SetTypeDef(m.prog.MustResolveSimple("std", "int"))
 					}),
 				)
-				fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
+				fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
 
-					blk.AddStatements(wdl.RawStmt(fmt.Sprintf("return e.ordinal")))
+					blk.Add(wdl.RawStmt(fmt.Sprintf("return e.ordinal")))
 				}))
 			}),
 			wdl.NewFunc(func(fn *wdl.Func) {
@@ -128,9 +128,9 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 						param.SetTypeDef(m.prog.MustResolveSimple("std", "bool"))
 					}),
 				)
-				fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
+				fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
 
-					blk.AddStatements(wdl.RawStmt(fmt.Sprintf("return e.ordinal>0")))
+					blk.Add(wdl.RawStmt(fmt.Sprintf("return e.ordinal>0")))
 				}))
 			}),
 			wdl.NewFunc(func(fn *wdl.Func) {
@@ -165,7 +165,7 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 					}).AsResolvedType())
 				}))
 
-				fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
+				fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
 					tmp := "switch e.ordinal {\n"
 					for idx, resolvedType := range union.Types() {
 						ord := idx + 1
@@ -179,8 +179,8 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 					}
 					tmp += "}\n"
 
-					blk.AddStatements(wdl.RawStmt(tmp))
-					blk.AddStatements(wdl.RawStmt("\nif _onDefault != nil {\n_onDefault(e.value)\n}\n"))
+					blk.Add(wdl.RawStmt(tmp))
+					blk.Add(wdl.RawStmt("\nif _onDefault != nil {\n_onDefault(e.value)\n}\n"))
 				}))
 			}),
 		)
@@ -203,10 +203,10 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 							param.SetTypeDef(m.prog.MustResolveSimple("std", "bool"))
 						}),
 					)
-					fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
+					fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
 						tmp := golang.NewRFile(golang.NewRenderer(golang.Options{}), union.Pkg().Qualifier())
 						gtype := tmp.GoType(resolvedType)
-						blk.AddStatements(wdl.RawStmt(fmt.Sprintf("var zero %s\nif e.ordinal==%d {\nreturn e.value.(%s), true}\n\n return zero, false\n", gtype, ord, gtype)))
+						blk.Add(wdl.RawStmt(fmt.Sprintf("var zero %s\nif e.ordinal==%d {\nreturn e.value.(%s), true}\n\n return zero, false\n", gtype, ord, gtype)))
 					}))
 				}),
 				wdl.NewFunc(func(fn *wdl.Func) {
@@ -225,8 +225,8 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 							param.SetTypeDef(strct.AsResolvedType())
 						}),
 					)
-					fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
-						blk.AddStatements(wdl.RawStmt(fmt.Sprintf("e.ordinal=%d\ne.value=v\nreturn e", ord)))
+					fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
+						blk.Add(wdl.RawStmt(fmt.Sprintf("e.ordinal=%d\ne.value=v\nreturn e", ord)))
 					}))
 				}),
 			)
@@ -305,7 +305,7 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 				}).AsResolvedType())
 			}))
 
-			fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
+			fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
 				tmp := "switch e.ordinal {\n"
 				for idx, resolvedType := range union.Types() {
 					ord := idx + 1
@@ -319,9 +319,9 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 				}
 				tmp += "}\n"
 
-				blk.AddStatements(wdl.RawStmt("if _onDefault == nil{\npanic(`missing default match: cannot guarantee exhaustive matching`)\n}\n\n"))
-				blk.AddStatements(wdl.RawStmt(tmp))
-				blk.AddStatements(wdl.RawStmt("\nreturn _onDefault(e.value)\n"))
+				blk.Add(wdl.RawStmt("if _onDefault == nil{\npanic(`missing default match: cannot guarantee exhaustive matching`)\n}\n\n"))
+				blk.Add(wdl.RawStmt(tmp))
+				blk.Add(wdl.RawStmt("\nreturn _onDefault(e.value)\n"))
 			}))
 		}))
 	}))

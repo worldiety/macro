@@ -218,3 +218,26 @@ The following annotations are available and inspected:
 * @Repository
 * @BoundedContext
 * @DomainService
+
+## Permission audit linter and generator of use cases
+
+Permissions per use case are and reaching out to a security audit log is tedious, repeating and error prone task.
+Therefore, we have created this macro to lint the correct usage of an audit mechanism, keep the static permissions unique per program and emit a table for it.
+
+Start with annotating your use cases and keep the following form:
+
+```go
+// #[@Usecase]
+// #[go.permission.audit]
+func (z *Zeiterfassung) ZeitBuchen(user YourWhateverDomainAuthType, mitarbeiter Mitarbeiter, dauer time.Duration) (int, error) {
+	// the first statement must be combined guard-check-call to the audit log 
+	// the permission ID is hand-coded by you 
+	if err := user.Audit("de.worldiety.mitarbeiter"); err != nil {
+		// the last statement in the guard-check must be a return 
+		return 0, err
+    } 
+	
+	// actual use case logic 
+	//...
+}
+```

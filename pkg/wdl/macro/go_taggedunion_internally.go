@@ -27,8 +27,8 @@ func (m *GoTaggedUnion) goTaggedUnionJSONInternallyTagged(opts goTaggedUnionPara
 				r.SetName("e")
 				r.SetTypeDef(uStruct.AsResolvedType())
 			}))
-			fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
-				blk.AddStatements(
+			fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
+				blk.Add(
 					wdl.RawStmt("if e.ordinal == 0 {\nreturn nil, fmt.Errorf(\"marshalling a zero value is not allowed\")\n}\n\n"),
 					wdl.RawStmt("// note, that by definition, this kind of encoding does not work with union types which evaluates to null, arrays or primitives.\n// Chose adjacent encoding instead.\n"),
 					wdl.RawStmt("buf,err:= json.Marshal(e.value)\n\tif err !=nil{\n\t\treturn nil,err\n\t}\nvar prefix []byte\n"),
@@ -44,8 +44,8 @@ func (m *GoTaggedUnion) goTaggedUnionJSONInternallyTagged(opts goTaggedUnionPara
 					tmp += fmt.Sprintf("prefix = []byte(`{\"type\":%s`)\n", strconv.Quote(strCaseConst.String()))
 				}
 				tmp += "}\n"
-				blk.AddStatements(wdl.RawStmt(tmp))
-				blk.AddStatements(wdl.RawStmt(`
+				blk.Add(wdl.RawStmt(tmp))
+				blk.Add(wdl.RawStmt(`
 
 if len(buf)>2{
 	// we expect an empty object like {} or at least an object with a single attribute, which requires a , separator
@@ -80,8 +80,8 @@ buf= append(buf[1:], prefix...)
 				r.SetTypeDef(uStruct.AsResolvedType())
 				r.TypeDef().SetPointer(true)
 			}))
-			fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
-				blk.AddStatements(
+			fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
+				blk.Add(
 					wdl.RawStmt("typeOnly := struct {\n\t\tType string `json:\""+tagAttrName+"\"`\n\n}{}\n"),
 					wdl.RawStmt(`if err := json.Unmarshal(bytes, &typeOnly); err != nil {
 		return err
@@ -109,7 +109,7 @@ buf= append(buf[1:], prefix...)
 				tmp += "default:\nreturn fmt.Errorf(\"unknown type variant name '%s'\",typeOnly.Type)"
 				tmp += "}\n\nreturn nil\n"
 
-				blk.AddStatements(wdl.RawStmt(tmp))
+				blk.Add(wdl.RawStmt(tmp))
 			}))
 		}),
 	)

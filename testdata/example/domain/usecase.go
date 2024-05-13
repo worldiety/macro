@@ -19,7 +19,7 @@ type Mitarbeiter struct {
 
 // #[@Aggregate]
 type User interface {
-	Audit()
+	Audit(string) error
 }
 
 // ZeitlogRepo manages the Zeitlogs.
@@ -39,19 +39,36 @@ func NewZeiterfassung(repo ZeitlogRepo) *Zeiterfassung {
 	return &Zeiterfassung{repo: repo}
 }
 
-// #[@Usecase]
-func Aufstehen() {
+type Auditor interface {
+	Audit(string) error
+}
 
+// #[@Usecase]
+// #[go.permission.audit]
+func Aufstehen(audit Auditor) error {
+	if err := audit.Audit("de.worldiety.aufstehen"); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Cooles Zeitbuchen ist angesagt.
 // #[@Usecase]
-func (z *Zeiterfassung) ZeitBuchen(user User, mitarbeiter Mitarbeiter, dauer time.Duration) error {
-	user.Audit()
+// #[go.permission.audit]
+func (z *Zeiterfassung) ZeitBuchen(user User, mitarbeiter Mitarbeiter, dauer time.Duration) (int, error) {
+	if err := user.Audit("de.worldiety.aufstehen2"); err != nil {
+		return 0, err
+	}
 	z.repo.Save(Zeitlog{
 		Dauer: dauer,
 		Text:  "gearbeitet",
 	})
 	//fmt.Println("zeit gebucht", user.Audit)
-	return nil
+	return 0, nil
+}
+
+// #[@Usecase "Beschwerde einreichen"]
+func (z *Zeiterfassung) BeschwerdeEinreichen(msg string) {
+
 }

@@ -8,3 +8,5 @@ type Identifier string
 func (id Identifier) String() string {
 	return string(id)
 }
+
+func (id Identifier) expression() {}

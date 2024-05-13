@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/macro/annotation"
+	"github.com/worldiety/macro/pkg/wdl/macro/audit"
 	"github.com/worldiety/macro/pkg/wdl/macro/markdown"
 	"github.com/worldiety/macro/pkg/wdl/render/golang"
 	"github.com/worldiety/macro/pkg/wdl/render/typescript"
@@ -18,9 +19,14 @@ type Macro interface {
 	Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation) error
 }
 
+type GlobalMacro interface {
+	Expand() error
+}
+
 type Engine struct {
 	prog                                *wdl.Program
 	macros                              []Macro
+	globalPostMacros                    []GlobalMacro
 	preamble                            string
 	aggregateGeneratedGoFilesPerPackage bool
 }
@@ -30,8 +36,13 @@ func NewEngine(pg *wdl.Program) *Engine {
 	e.macros = []Macro{
 		annotation.NewAnnotation(pg, e.preamble),
 		NewGoTaggedUnion(pg, e.preamble),
+		audit.NewAddPermissionAnnotation(pg),
 		NewTranspileTypeScript(pg, e.preamble),
-		markdown.NewMarkdown(pg, e.preamble),
+		markdown.NewMarkdown(pg, e.preamble), // process documentation as the last process after all AST generation
+	}
+
+	e.globalPostMacros = []GlobalMacro{
+		audit.NewUniquePermissionCheckAnnotation(pg),
 	}
 
 	return e
@@ -60,7 +71,7 @@ func (e *Engine) Exec() error {
 					if name == macroInvoc.Name() {
 						delete(unusedMacroDeclarations, macroInvoc)
 						if err := macro.Expand(pkg, macroInvoc); err != nil {
-							return wdl.NewErrorWithPos(macroInvoc.Pos(), fmt.Errorf("macro %s execution error: %w", macroInvoc.Name(), err))
+							return fmt.Errorf("macro %s execution error: %w: %s", macroInvoc.Name(), err, pkg.Name())
 						}
 					}
 				}
@@ -72,7 +83,7 @@ func (e *Engine) Exec() error {
 						if name == macroInvoc.Name() {
 							delete(unusedMacroDeclarations, macroInvoc)
 							if err := macro.Expand(def, macroInvoc); err != nil {
-								return wdl.NewErrorWithPos(macroInvoc.Pos(), fmt.Errorf("macro %s execution error: %w", macroInvoc.Name(), err))
+								return wdl.NewErrorWithPos(macroInvoc.Pos(), fmt.Errorf("macro %s execution error: %w: %s", macroInvoc.Name(), err, def.Name()))
 							}
 						}
 					}
@@ -90,6 +101,13 @@ func (e *Engine) Exec() error {
 
 	if len(unusedMacroDeclarations) > 0 {
 		return wdl.NewErrorWithPos(someUnused.Pos(), fmt.Errorf("unknown macro"))
+	}
+
+	// run post macros
+	for _, macro := range e.globalPostMacros {
+		if err := macro.Expand(); err != nil {
+			return err
+		}
 	}
 
 	return nil

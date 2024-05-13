@@ -27,8 +27,8 @@ func (m *GoTaggedUnion) goTaggedUnionJSONAdjacentlyTagged(opts goTaggedUnionPara
 				r.SetName("e")
 				r.SetTypeDef(uStruct.AsResolvedType())
 			}))
-			fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
-				blk.AddStatements(
+			fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
+				blk.Add(
 					wdl.RawStmt("if e.ordinal == 0 {\nreturn nil, fmt.Errorf(\"marshalling a zero value is not allowed\")\n}\n\n"),
 					wdl.RawStmt("// note, that by definition, this kind of encoding does not work with union types which evaluates to null, arrays or primitives.\n// Chose adjacent encoding instead.\n"),
 					wdl.RawStmt(fmt.Sprintf("type adjacentlyTagged[T any] struct {\n\tType  string `json:%s`\n\tValue T      `json:%s`\n}", strconv.Quote(opts.TagName), strconv.Quote(opts.Content))),
@@ -51,7 +51,7 @@ func (m *GoTaggedUnion) goTaggedUnionJSONAdjacentlyTagged(opts goTaggedUnionPara
 				tmp += "default:\nreturn nil,fmt.Errorf(\"unknown type ordinal variant '%d'\",e.ordinal)"
 
 				tmp += "}\n"
-				blk.AddStatements(wdl.RawStmt(tmp))
+				blk.Add(wdl.RawStmt(tmp))
 			}))
 		}),
 
@@ -76,8 +76,8 @@ func (m *GoTaggedUnion) goTaggedUnionJSONAdjacentlyTagged(opts goTaggedUnionPara
 				r.SetTypeDef(uStruct.AsResolvedType())
 				r.TypeDef().SetPointer(true)
 			}))
-			fn.SetBody(wdl.NewBlock(func(blk *wdl.Block) {
-				blk.AddStatements(
+			fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
+				blk.Add(
 					wdl.RawStmt("typeOnly := struct {\n\t\tType string `json:\""+opts.TagName+"\"`\n\n}{}\n"),
 					wdl.RawStmt(`if err := json.Unmarshal(bytes, &typeOnly); err != nil {
 		return err
@@ -106,7 +106,7 @@ func (m *GoTaggedUnion) goTaggedUnionJSONAdjacentlyTagged(opts goTaggedUnionPara
 				tmp += "default:\nreturn fmt.Errorf(\"unknown type variant name '%s'\",typeOnly.Type)"
 				tmp += "}\n\nreturn nil\n"
 
-				blk.AddStatements(wdl.RawStmt(tmp))
+				blk.Add(wdl.RawStmt(tmp))
 			}))
 		}),
 	)

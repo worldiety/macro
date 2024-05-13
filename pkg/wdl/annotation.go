@@ -322,3 +322,43 @@ func (s *DomainServiceAnnotation) Name() string {
 
 	return s.typeDef.Name().String()
 }
+
+type PermissionAnnotation struct {
+	permissionID string
+	pos          Pos
+	typeDef      TypeDef
+}
+
+func (p *PermissionAnnotation) PermissionID() string {
+	return p.permissionID
+}
+
+func (p *PermissionAnnotation) SetPermissionID(permissionID string) {
+	p.permissionID = permissionID
+}
+
+func (p *PermissionAnnotation) Pos() Pos {
+	return p.pos
+}
+
+func (p *PermissionAnnotation) SetPos(pos Pos) {
+	p.pos = pos
+}
+
+func (p *PermissionAnnotation) TypeDef() TypeDef {
+	return p.typeDef
+}
+
+func (p *PermissionAnnotation) SetTypeDef(typeDef TypeDef) {
+	p.typeDef = typeDef
+}
+
+func NewPermissionAnnotation(with func(annotation *PermissionAnnotation)) *PermissionAnnotation {
+	p := &PermissionAnnotation{}
+	if with != nil {
+		with(p)
+	}
+	return p
+}
+
+func (p *PermissionAnnotation) isAnnotation() {}

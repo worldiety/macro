@@ -7,15 +7,12 @@ import (
 	"go/token"
 	"go/types"
 	"golang.org/x/tools/go/callgraph"
-	"golang.org/x/tools/go/callgraph/cha"
-	"golang.org/x/tools/go/callgraph/vta"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
 	"log/slog"
 	"path/filepath"
 	"reflect"
-	"strings"
 )
 
 type Program struct {
@@ -23,6 +20,7 @@ type Program struct {
 	SSAPkgs   []*ssa.Package
 	Program   *wdl.Program
 	Callgraph *callgraph.Graph
+	//callgraphMap map[wdl.TypeRef]*types.Signature
 }
 
 func Parse(dir string) (*Program, error) {
@@ -46,52 +44,58 @@ func Parse(dir string) (*Program, error) {
 	prog.Build()
 	goModPath := pkgs[0].Module.Path
 	slog.Info("found module path", slog.String("dir", goModPath))
+	/*
+	   // TODO we cannot use the SSA callgraph representation, because it removed already unreachable code fragments which is common during domain modelling
+	   	var cg *callgraph.Graph
+	   	cg = vta.CallGraph(ssautil.AllFunctions(prog), cha.CallGraph(prog))
+	   	cg.DeleteSyntheticNodes()
+	   	err = callgraph.GraphVisitEdges(cg, func(edge *callgraph.Edge) error {
+	   		var callerPkg string
+	   		if edge.Caller.Func.Pkg != nil {
+	   			callerPkg = edge.Caller.Func.Pkg.Pkg.Path()
 
-	var cg *callgraph.Graph
-	cg = vta.CallGraph(ssautil.AllFunctions(prog), cha.CallGraph(prog))
-	cg.DeleteSyntheticNodes()
-	err = callgraph.GraphVisitEdges(cg, func(edge *callgraph.Edge) error {
-		var callerPkg string
-		if edge.Caller.Func.Pkg != nil {
-			callerPkg = edge.Caller.Func.Pkg.Pkg.Path()
+	   		}
+	   		callerFuncName := edge.Caller.Func.Name()
 
-		}
-		callerFuncName := edge.Caller.Func.Name()
+	   		var calleePkg string
+	   		if edge.Callee.Func.Pkg != nil {
+	   			calleePkg = edge.Callee.Func.Pkg.Pkg.Path()
 
-		var calleePkg string
-		if edge.Callee.Func.Pkg != nil {
-			calleePkg = edge.Callee.Func.Pkg.Pkg.Path()
+	   		}
+	   		calleeFuncName := edge.Callee.Func.Name()
 
-		}
-		calleeFuncName := edge.Callee.Func.Name()
+	   		if !strings.HasPrefix(calleePkg, goModPath) && !strings.HasPrefix(callerPkg, goModPath) {
+	   			return nil
+	   		}
 
-		if !strings.HasPrefix(calleePkg, goModPath) && !strings.HasPrefix(callerPkg, goModPath) {
-			return nil
-		}
+	   		var callerReceiverName string
+	   		if rec := edge.Caller.Func.Signature.Recv(); rec != nil {
+	   			switch t := rec.Type().(type) {
+	   			case *types.Pointer:
+	   				switch t := t.Elem().(type) {
+	   				case *types.Named:
+	   					callerReceiverName = t.Obj().Name()
+	   				}
+	   			case *types.Named:
+	   				callerReceiverName = t.Obj().Name()
+	   			}
+	   		}
 
-		var callerReceiverName string
-		if rec := edge.Caller.Func.Signature.Recv(); rec != nil {
-			switch t := rec.Type().(type) {
-			case *types.Pointer:
-				switch t := t.Elem().(type) {
-				case *types.Named:
-					callerReceiverName = t.Obj().Name()
-				}
-			case *types.Named:
-				callerReceiverName = t.Obj().Name()
-			}
-		}
+	   		if calleeFuncName == "Audit2" {
+	   			constVal := edge.Callee.In[0].Site.(*ssa.Call).Call.Args[0].(*ssa.Const).Value.String()
 
-		//fmt.Printf("%s.%s.%s -> %s.%s\n", callerPkg, callerReceiverName, callerFuncName, calleePkg, calleeFuncName)
-		_ = callerReceiverName
-		_ = calleeFuncName
-		_ = callerFuncName
-		return nil
-	})
+	   			fmt.Printf("%s.%s.%s -> %s.%s\n", callerPkg, callerReceiverName, callerFuncName, calleePkg, calleeFuncName)
+	   			fmt.Println("    ˆ--- ", constVal)
+	   		}
+	   		_ = callerReceiverName
+	   		_ = calleeFuncName
+	   		_ = callerFuncName
+	   		return nil
+	   	})
 
-	if err != nil {
-		return nil, fmt.Errorf("callgraph.GraphVisitEdges: %v", err)
-	}
+	   	if err != nil {
+	   		return nil, fmt.Errorf("callgraph.GraphVisitEdges: %v", err)
+	   	}*/
 
 	pg := wdl.NewProgram(nil)
 	if len(pkgs) > 0 {
@@ -99,10 +103,10 @@ func Parse(dir string) (*Program, error) {
 	}
 
 	p := &Program{
-		Program:   pg,
-		Pkgs:      pkgs,
-		SSAPkgs:   ssaPkgs,
-		Callgraph: cg,
+		Program: pg,
+		Pkgs:    pkgs,
+		SSAPkgs: ssaPkgs,
+		//Callgraph: cg,
 	}
 
 	return p, p.init()
@@ -375,6 +379,13 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 						strct.SetComment(comment)
 					}
 
+					for i := range namedObj.NumMethods() {
+						method := namedObj.Method(i)
+						sig := method.Type().(*types.Signature)
+						fn := p.makeFunc(strct.Name().String(), dstPkg, file, srcPkg, method, sig)
+						strct.AddMethods(fn)
+					}
+
 					for fidx := range obj.NumFields() {
 						tag := reflect.StructTag(obj.Tag(fidx))
 						f := obj.Field(fidx)
@@ -480,29 +491,8 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 		*/
 		//asobj.Elem()
 		case *types.Signature:
-			return wdl.NewFunc(func(fn *wdl.Func) {
-				fn.SetName(ref.Name)
-				dstPkg.AddTypeDefs(fn)
-				fn.SetPkg(dstPkg)
-				file.AddTypeDefs(fn)
-
-				for tpidx := range obj.TypeParams().Len() {
-					fn.AddTypeParams(wdl.NewResolvedType(func(rType *wdl.ResolvedType) {
-						tp := obj.TypeParams().At(tpidx)
-						rType.SetTypeParam(true)
-						rType.SetName(wdl.Identifier(tp.Obj().Name()))
-					}))
-				}
-
-				if comment := dstPkg.TypeComments()[fn.Name()]; comment != nil {
-					fn.SetComment(comment)
-				}
-
-				for i := range obj.Params().Len() {
-					param := obj.Params().At(i)
-					_ = param // TODO consolidate conversion code of struct fields, (generic) method receivers and this stuff
-				}
-			}), nil
+			// TODO we have them twice, once as a package level but with receiver and once per actual type, we certainly should resolve to a single instance
+			return p.makeFunc("", dstPkg, file, srcPkg, object, obj), nil
 		default:
 			slog.Error(fmt.Sprintf("type not implemented %T@%v", obj, objPos))
 		}
@@ -511,6 +501,99 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 	slog.Error(fmt.Sprintf("cannot convert def in package %v", ref), "found", found)
 
 	return nil, nil
+}
+
+func (p *Program) makeFunc(receiverTypeName string, dstPkg *wdl.Package, file *wdl.File, srcPkg *packages.Package, nobj types.Object, obj *types.Signature) *wdl.Func {
+	return wdl.NewFunc(func(fn *wdl.Func) {
+		fn.SetName(wdl.Identifier(nobj.Name()))
+		dstPkg.AddTypeDefs(fn)
+		fn.SetPkg(dstPkg)
+		file.AddTypeDefs(fn)
+
+		if nobj.Exported() {
+			fn.SetVisibility(wdl.Public)
+		} else {
+			fn.SetVisibility(wdl.PackagePrivat)
+		}
+
+		var fnDecl *ast.FuncDecl
+		for _, syntaxFile := range srcPkg.Syntax {
+			for _, decl := range syntaxFile.Decls {
+				if astFn, ok := decl.(*ast.FuncDecl); ok {
+					if astFn.Name != nil && astFn.Name.Name == nobj.Name() {
+						if receiverTypeName != "" && astFn.Recv != nil && len(astFn.Recv.List) > 0 {
+							name := ""
+							switch def := astFn.Recv.List[0].Type.(type) {
+							case *ast.Ident:
+								name = def.Name
+							case *ast.StarExpr:
+								if id, ok := def.X.(*ast.Ident); ok { // todo does not work nested, but thats likely never a domain code anyway
+									name = id.Name
+								}
+							}
+							if receiverTypeName != name {
+								continue
+							}
+						}
+						fnDecl = astFn
+						break
+					}
+				}
+			}
+		}
+
+		if fnDecl != nil {
+			fn.SetBody(wdl.NewBlockStmt(func(block *wdl.BlockStmt) {
+				for _, stmt := range fnDecl.Body.List {
+					wstmt, err := convertStatement(stmt)
+					if err != nil {
+						slog.Error("error converting statements in free func", "stmt", stmt, "err", err, "pkg", dstPkg.Qualifier(), "fn", fn.Name())
+						continue
+					}
+					block.Add(wstmt)
+				}
+			}))
+		}
+
+		for tpidx := range obj.TypeParams().Len() {
+			fn.AddTypeParams(wdl.NewResolvedType(func(rType *wdl.ResolvedType) {
+				tp := obj.TypeParams().At(tpidx)
+				rType.SetTypeParam(true)
+				rType.SetName(wdl.Identifier(tp.Obj().Name()))
+			}))
+		}
+
+		if comment := dstPkg.TypeComments()[fn.Name()]; comment != nil {
+			fn.SetComment(comment)
+		}
+
+		for i := range obj.Params().Len() {
+			param := obj.Params().At(i)
+			fn.AddArgs(p.newParam(param))
+		}
+
+		for i := range obj.Results().Len() {
+			param := obj.Results().At(i)
+			fn.AddResults(p.newParam(param))
+		}
+	})
+}
+
+func (p *Program) newParam(varr *types.Var) *wdl.Param {
+	return wdl.NewParam(func(param *wdl.Param) {
+		param.SetName(wdl.Identifier(varr.Name()))
+		ref, err := p.createRef(varr.Type())
+		if err != nil {
+			slog.Error("error creating ref for param of Var", "type", varr.Type(), "err", err)
+			return
+		}
+		def, err := p.getTypeDef(p.Program, ref)
+		if err != nil {
+			slog.Error("error getting def for param  of Var", "type", varr.Type(), "err", err)
+			return
+		}
+		param.SetTypeDef(def.AsResolvedType())
+	})
 }
 
 func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name string) (wdl.TypeDef, error) {

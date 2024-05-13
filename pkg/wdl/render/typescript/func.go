@@ -57,7 +57,7 @@ func (r *RFile) renderFunc(f *wdl.Func, w *render.Writer) error {
 	// func block body
 	if f.Body() != nil {
 		w.Printf("{\n")
-		for _, statement := range f.Body().Statements() {
+		for _, statement := range f.Body().List() {
 			if err := r.renderStmt(statement, w); err != nil {
 				return err
 			}

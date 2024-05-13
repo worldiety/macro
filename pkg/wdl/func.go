@@ -29,41 +29,6 @@ func NewParam(with func(param *Param)) *Param {
 	return p
 }
 
-type Block struct {
-	statements []Statement
-}
-
-func (b *Block) Statements() []Statement {
-	return b.statements
-}
-
-func (b *Block) SetStatements(statements []Statement) {
-	b.statements = statements
-}
-
-func (b *Block) AddStatements(statements ...Statement) {
-	b.statements = append(b.statements, statements...)
-}
-
-func (b *Block) statement() {}
-
-func NewBlock(with func(blk *Block)) *Block {
-	b := &Block{}
-	if with != nil {
-		with(b)
-	}
-
-	return b
-}
-
-type RawStmt string
-
-func (b RawStmt) statement() {}
-
-type Statement interface {
-	statement()
-}
-
 type Func struct {
 	pkg        *Package
 	name       Identifier
@@ -72,7 +37,7 @@ type Func struct {
 	typeParams []*ResolvedType
 	receiver   *Param
 	visibility Visibility
-	body       *Block
+	body       *BlockStmt
 	comment    *Comment
 }
 
@@ -123,11 +88,11 @@ func (f *Func) AsResolvedType() *ResolvedType {
 	})
 }
 
-func (f *Func) Body() *Block {
+func (f *Func) Body() *BlockStmt {
 	return f.body
 }
 
-func (f *Func) SetBody(body *Block) {
+func (f *Func) SetBody(body *BlockStmt) {
 	f.body = body
 }
 
