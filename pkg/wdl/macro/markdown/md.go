@@ -19,7 +19,7 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 
 			md.Printf("### Anwendungsfälle\n\n")
 			for _, usecase := range m.collectUsecases(bc.Pkg()) {
-				md.Printf("#### <a name=\"%s\"></a> %s\n\n", usecase.Fn().Name(), usecase.Name())
+				md.Printf("#### [%s](#%s)\n\n", usecase.Name(), usecase.Fn().Name())
 				text := commentText1(usecase.Fn())
 				if text == "" {
 					md.Print("Dieser Anwendungsfall ist noch nicht dokumentiert.\n\n")
@@ -113,6 +113,8 @@ func (m *Markdown) chapterSecurity(md *render.Writer) {
 				md.Printf("|%s|[%s](#%s)|\n", permission.PermissionID(), m.alias(permission.TypeDef()), permission.TypeDef().Name())
 			}
 		}
+
+		md.Printf("\n")
 
 		var anonUseCases []*wdl.UseCaseAnnotation
 		for _, useCase := range useCases {
