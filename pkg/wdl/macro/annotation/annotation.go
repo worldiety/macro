@@ -14,6 +14,7 @@ const (
 	repositoryAnnotation     = "@Repository"
 	boundedContextAnnotation = "@BoundedContext"
 	domainService            = "@DomainService"
+	project                  = "@Project"
 )
 
 type Annotation struct {
@@ -35,6 +36,7 @@ func (m *Annotation) Names() []wdl.MacroName {
 		boundedContextAnnotation,
 		repositoryAnnotation,
 		domainService,
+		project,
 	}
 }
 
@@ -64,6 +66,12 @@ func (m *Annotation) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation) er
 			a = wdl.NewBoundedContextAnnotation(macroInvoc.Value(), pkg, macroInvoc.Pos())
 		} else {
 			return wdl.NewErrorWithPos(macroInvoc.Pos(), fmt.Errorf("only packages can be annotated as bounded context"))
+		}
+	case project:
+		if pkg, ok := def.(*wdl.Package); ok {
+			a = wdl.NewProjectAnnotation(macroInvoc.Value(), pkg, macroInvoc.Pos())
+		} else {
+			return wdl.NewErrorWithPos(macroInvoc.Pos(), fmt.Errorf("only packages can be annotated as a project"))
 		}
 	default:
 		return wdl.NewErrorWithPos(macroInvoc.Pos(), fmt.Errorf("unknown annotation type"))

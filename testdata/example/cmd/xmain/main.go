@@ -1,3 +1,5 @@
+// Dieses Projekt ist ein Beispielprojekt und zeigt die Verwendung verschiedener Annotationen.
+// #[@Project "Beispielprojekt"]
 package main
 
 import (
@@ -8,7 +10,7 @@ import (
 	"time"
 )
 
-// #[markdown "out":"README.md"]
+// #[markdown "out":"README.md", "omitSecurityChapter":false]
 func main() {
 	var repo domain.ZeitlogRepo
 	if time.Now().UnixMilli()%10 == 0 {

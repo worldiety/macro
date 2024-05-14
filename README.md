@@ -187,10 +187,10 @@ func main() {
 }
 ```
 
-You can customize the out file, by providing the _out_ attribute:
+You can customize the out file, by providing the _out_ and other attributes:
 
 ```rust
-#[markdown "out":"my-glossary.md"]
+#[markdown "out":"my-glossary.md", "omitSecurityChapter":false]
 ```
 
 Then continue by annotating your bounded context packages.
@@ -224,6 +224,7 @@ The following annotations are available and inspected:
 * @Repository
 * @BoundedContext
 * @DomainService
+* @Project
 
 ## Permission audit linter and generator of use cases
 

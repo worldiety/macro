@@ -1,6 +1,11 @@
-# example
+# Beispielprojekt
+
+Dieses Projekt ist ein Beispielprojekt und zeigt die Verwendung verschiedener Annotationen.
+
 
 ## Zeiterfassungsmanagement
+
+Package domain enthält den Bounded Context über die Zeiterfassung.
 
 ### Anwendungsfälle
 
@@ -36,13 +41,18 @@ Mitarbeiter arbeitet bei seinem Arbeitgeber.
 
 Dieses Aggregat ist noch nicht dokumentiert.
 
-### Domänenereignisse
-
 ### Domänenservices
 
 #### Zeiterfassung
 
 Dieser Service ist noch nicht dokumentiert.
+
+### Repositories
+
+#### Zeitaufzeichnungen
+
+ZeitlogRepo manages the Zeitlogs.
+
 
 ## Berechtigungskonzept
 

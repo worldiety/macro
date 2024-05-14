@@ -10,15 +10,26 @@ import (
 
 func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl.MacroInvocation) *render.Writer {
 	md := &render.Writer{}
-	md.Printf("# %s\n\n", filepath.Base(m.prog.Path()))
-	// TODO we need a project name and project preamble text to include here
-	for _, annotation := range m.prog.Annotations() {
+	m.chapterProject(md)
 
-		if bc, ok := annotation.(*wdl.BoundedContextAnnotation); ok {
-			md.Printf("## %s\n\n", bc.Name())
+	boundedContexts := m.collectMergedBoundedContexts(m.prog.Annotations())
+	for _, bctx := range boundedContexts {
+		md.Printf("## %s\n\n", bctx.name)
+		text := ""
+		for _, bc := range bctx.bcs {
+			text += commentText1(bc.Pkg()) + "\n"
+		}
+		text = strings.TrimSpace(text)
+		if len(text) == 0 {
+			md.Print("Dieser Bounded Context ist noch nicht dokumentiert.\n\n")
+		} else {
+			md.Print(text)
+		}
+		md.Print("\n\n")
 
+		if len(bctx.useCases) > 0 {
 			md.Printf("### Anwendungsfälle\n\n")
-			for _, usecase := range m.collectUsecases(bc.Pkg()) {
+			for _, usecase := range bctx.useCases {
 				md.Printf("#### %s\n\n", usecase.Name())
 				text := commentText1(usecase.Fn())
 				if text == "" {
@@ -28,9 +39,11 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 					md.Print("\n\n")
 				}
 			}
+		}
 
+		if len(bctx.useCases) > 0 {
 			md.Printf("### Werte\n\n")
-			for _, a := range collectWithTypeDef[*wdl.ValueAnnotation](m, bc.Pkg()) {
+			for _, a := range bctx.values {
 				md.Printf("#### %s\n\n", a.Name())
 				text := commentText1(a.TypeDef())
 				if text == "" {
@@ -40,9 +53,11 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 					md.Print("\n\n")
 				}
 			}
+		}
 
+		if len(bctx.entities) > 0 {
 			md.Printf("### Entitäten\n\n")
-			for _, a := range collectWithTypeDef[*wdl.EntityAnnotation](m, bc.Pkg()) {
+			for _, a := range bctx.entities {
 				md.Printf("#### %s\n\n", a.Name())
 				text := commentText1(a.TypeDef())
 				if text == "" {
@@ -52,9 +67,11 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 					md.Print("\n\n")
 				}
 			}
+		}
 
+		if len(bctx.aggregates) > 0 {
 			md.Printf("### Aggregate\n\n")
-			for _, a := range collectWithTypeDef[*wdl.AggregateRootAnnotation](m, bc.Pkg()) {
+			for _, a := range bctx.aggregates {
 				md.Printf("#### %s\n\n", a.Name())
 				text := commentText1(a.TypeDef())
 				if text == "" {
@@ -64,9 +81,10 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 					md.Print("\n\n")
 				}
 			}
-
+		}
+		if len(bctx.events) > 0 {
 			md.Printf("### Domänenereignisse\n\n")
-			for _, a := range collectWithTypeDef[*wdl.DomainEventAnnotation](m, bc.Pkg()) {
+			for _, a := range bctx.events {
 				md.Printf("#### %s\n\n", a.Name())
 				text := commentText1(a.TypeDef())
 				if text == "" {
@@ -76,9 +94,11 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 					md.Print("\n\n")
 				}
 			}
+		}
 
+		if len(bctx.services) > 0 {
 			md.Printf("### Domänenservices\n\n")
-			for _, a := range collectWithTypeDef[*wdl.DomainServiceAnnotation](m, bc.Pkg()) {
+			for _, a := range bctx.services {
 				md.Printf("#### %s\n\n", a.Name())
 				text := commentText1(a.TypeDef())
 				if text == "" {
@@ -88,13 +108,51 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 					md.Print("\n\n")
 				}
 			}
+		}
 
+		if len(bctx.repos) > 0 {
+			md.Printf("### Repositories\n\n")
+			for _, a := range bctx.repos {
+				md.Printf("#### %s\n\n", a.Name())
+				text := commentText1(a.TypeDef())
+				if text == "" {
+					md.Print("Dieses Repository ist noch nicht dokumentiert.\n\n")
+				} else {
+					md.Print(text)
+					md.Print("\n\n")
+				}
+			}
 		}
 	}
 
-	m.chapterSecurity(md)
+	if !opts.OmitSecurityChapter {
+		m.chapterSecurity(md)
+	}
 
 	return md
+}
+
+func (m *Markdown) chapterProject(md *render.Writer) {
+	var prj *wdl.ProjectAnnotation
+	for _, annotation := range m.prog.Annotations() {
+		if a, ok := annotation.(*wdl.ProjectAnnotation); ok {
+			prj = a
+			break
+		}
+	}
+
+	prjName := filepath.Base(m.prog.Path())
+	if prj != nil {
+		prjName = prj.Name()
+	}
+
+	md.Printf("# %s\n\n", prjName)
+	if prj == nil || prj.Pkg().Comment().String() == "" {
+		md.Printf("Das Projekt ist noch nicht dokumentiert.\n\n")
+	} else {
+		md.Print(commentText1(prj.Pkg()))
+		md.Print("\n\n")
+	}
 }
 
 func (m *Markdown) chapterSecurity(md *render.Writer) {
@@ -113,6 +171,11 @@ func (m *Markdown) chapterSecurity(md *render.Writer) {
 				md.Printf("|%s|[%s](#%s)|\n", permission.PermissionID(), m.alias(permission.TypeDef()), m.alias(permission.TypeDef()))
 			}
 		}
+
+		// there is a later post macro which validates the actual uniqueness
+		permissions = slices.CompactFunc(permissions, func(annotation *wdl.PermissionAnnotation, annotation2 *wdl.PermissionAnnotation) bool {
+			return annotation.PermissionID() == annotation2.PermissionID()
+		})
 
 		md.Printf("\n")
 
@@ -144,6 +207,124 @@ func (m *Markdown) chapterSecurity(md *render.Writer) {
 	}
 }
 
+type aggregatedBC struct {
+	name       string
+	bcs        []*wdl.BoundedContextAnnotation
+	useCases   []*wdl.UseCaseAnnotation
+	repos      []*wdl.RepositoryAnnotation
+	values     []*wdl.ValueAnnotation
+	entities   []*wdl.EntityAnnotation
+	aggregates []*wdl.AggregateRootAnnotation
+	events     []*wdl.DomainEventAnnotation
+	services   []*wdl.DomainServiceAnnotation
+}
+
+func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []aggregatedBC {
+	tmp := make(map[string]aggregatedBC)
+	for _, annotation := range annotations {
+		if bcAn, ok := annotation.(*wdl.BoundedContextAnnotation); ok {
+			abc := tmp[bcAn.Name()]
+			abc.name = bcAn.Name()
+			abc.bcs = append(abc.bcs, bcAn)
+			slices.SortFunc(abc.bcs, func(a, b *wdl.BoundedContextAnnotation) int {
+				// provide a stable order
+				return strings.Compare(string(a.Pkg().Qualifier()), string(b.Pkg().Qualifier()))
+			})
+
+			// use cases
+			for _, usecase := range m.collectUsecases(bcAn.Pkg()) {
+				abc.useCases = append(abc.useCases, usecase)
+			}
+
+			slices.SortFunc(abc.useCases, func(a, b *wdl.UseCaseAnnotation) int {
+				return strings.Compare(a.Name(), b.Name())
+			})
+
+			abc.useCases = slices.Compact(abc.useCases)
+
+			// repos
+			for _, repo := range collectWithTypeDef[*wdl.RepositoryAnnotation](m, bcAn.Pkg()) {
+				abc.repos = append(abc.repos, repo)
+			}
+
+			slices.SortFunc(abc.repos, func(a, b *wdl.RepositoryAnnotation) int {
+				return strings.Compare(a.Name(), b.Name())
+			})
+
+			abc.repos = slices.Compact(abc.repos)
+
+			// values
+			for _, value := range collectWithTypeDef[*wdl.ValueAnnotation](m, bcAn.Pkg()) {
+				abc.values = append(abc.values, value)
+			}
+
+			slices.SortFunc(abc.values, func(a, b *wdl.ValueAnnotation) int {
+				return strings.Compare(a.Name(), b.Name())
+			})
+
+			abc.values = slices.Compact(abc.values)
+
+			// entities
+			for _, ent := range collectWithTypeDef[*wdl.EntityAnnotation](m, bcAn.Pkg()) {
+				abc.entities = append(abc.entities, ent)
+			}
+
+			slices.SortFunc(abc.entities, func(a, b *wdl.EntityAnnotation) int {
+				return strings.Compare(a.Name(), b.Name())
+			})
+
+			abc.entities = slices.Compact(abc.entities)
+
+			// aggregates
+			for _, agr := range collectWithTypeDef[*wdl.AggregateRootAnnotation](m, bcAn.Pkg()) {
+				abc.aggregates = append(abc.aggregates, agr)
+			}
+
+			slices.SortFunc(abc.aggregates, func(a, b *wdl.AggregateRootAnnotation) int {
+				return strings.Compare(a.Name(), b.Name())
+			})
+
+			abc.aggregates = slices.Compact(abc.aggregates)
+
+			// events
+			for _, evt := range collectWithTypeDef[*wdl.DomainEventAnnotation](m, bcAn.Pkg()) {
+				abc.events = append(abc.events, evt)
+			}
+
+			slices.SortFunc(abc.events, func(a, b *wdl.DomainEventAnnotation) int {
+				return strings.Compare(a.Name(), b.Name())
+			})
+
+			abc.events = slices.Compact(abc.events)
+
+			// services
+			for _, srv := range collectWithTypeDef[*wdl.DomainServiceAnnotation](m, bcAn.Pkg()) {
+				abc.services = append(abc.services, srv)
+			}
+
+			slices.SortFunc(abc.services, func(a, b *wdl.DomainServiceAnnotation) int {
+				return strings.Compare(a.Name(), b.Name())
+			})
+
+			abc.services = slices.Compact(abc.services)
+
+			// update slot
+			tmp[bcAn.Name()] = abc
+		}
+	}
+
+	var result []aggregatedBC
+	for _, bc := range tmp {
+		result = append(result, bc)
+	}
+
+	slices.SortFunc(result, func(a, b aggregatedBC) int {
+		return strings.Compare(a.name, b.name)
+	})
+
+	return result
+}
+
 func collectPermissions(annotations []wdl.Annotation) []*wdl.PermissionAnnotation {
 	var tmp []*wdl.PermissionAnnotation
 	for _, annotation := range annotations {
@@ -161,6 +342,10 @@ func collectUseCases(annotations []wdl.Annotation) []*wdl.UseCaseAnnotation {
 			tmp = append(tmp, pAn)
 		}
 	}
+
+	slices.SortFunc(tmp, func(a, b *wdl.UseCaseAnnotation) int {
+		return strings.Compare(a.Name(), b.Name())
+	})
 	return tmp
 }
 

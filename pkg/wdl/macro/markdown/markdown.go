@@ -7,7 +7,8 @@ import (
 )
 
 type markdownParams struct {
-	Out string `json:"out"` // the output markdown file. Default is <module root>/README.md
+	Out                 string `json:"out"` // the output markdown file. Default is <module root>/README.md
+	OmitSecurityChapter bool   `json:"omitSecurityChapter"`
 }
 
 type Markdown struct {

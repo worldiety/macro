@@ -150,7 +150,31 @@ func NewRepositoryAnnotation(alias string, pos Pos, def TypeDef) *RepositoryAnno
 	return &RepositoryAnnotation{alias: alias, pos: pos, typeDef: def}
 }
 
+func (s *RepositoryAnnotation) TypeDef() TypeDef {
+	return s.typeDef
+}
+
+func (s *RepositoryAnnotation) SetTypeDef(typeDef TypeDef) {
+	s.typeDef = typeDef
+}
+
 func (s *RepositoryAnnotation) isAnnotation() {}
+
+func (s *RepositoryAnnotation) Name() string {
+	if s.alias != "" {
+		return s.alias
+	}
+
+	return s.typeDef.Name().String()
+}
+
+func (s *RepositoryAnnotation) Alias() string {
+	return s.alias
+}
+
+func (s *RepositoryAnnotation) SetAlias(alias string) {
+	s.alias = alias
+}
 
 type AggregateRootAnnotation struct {
 	alias   string
@@ -366,3 +390,47 @@ func NewPermissionAnnotation(with func(annotation *PermissionAnnotation)) *Permi
 }
 
 func (p *PermissionAnnotation) isAnnotation() {}
+
+type ProjectAnnotation struct {
+	alias string
+	pos   Pos
+	pkg   *Package
+}
+
+func (s *ProjectAnnotation) Name() string {
+	if s.alias != "" {
+		return s.alias
+	}
+
+	return s.pkg.Name().String()
+}
+
+func (s *ProjectAnnotation) Alias() string {
+	return s.alias
+}
+
+func (s *ProjectAnnotation) SetAlias(alias string) {
+	s.alias = alias
+}
+
+func (s *ProjectAnnotation) Pos() Pos {
+	return s.pos
+}
+
+func (s *ProjectAnnotation) SetPos(pos Pos) {
+	s.pos = pos
+}
+
+func (s *ProjectAnnotation) Pkg() *Package {
+	return s.pkg
+}
+
+func (s *ProjectAnnotation) SetPkg(pkg *Package) {
+	s.pkg = pkg
+}
+
+func NewProjectAnnotation(alias string, pkg *Package, pos Pos) *ProjectAnnotation {
+	return &ProjectAnnotation{alias: alias, pos: pos, pkg: pkg}
+}
+
+func (s *ProjectAnnotation) isAnnotation() {}
