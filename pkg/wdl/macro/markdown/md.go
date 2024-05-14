@@ -15,10 +15,11 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 
 	boundedContexts := m.collectMergedBoundedContexts(m.prog.Annotations())
 	for _, bctx := range boundedContexts {
+
 		md.Printf("## %s\n\n", bctx.name)
 		text := ""
 		for _, bc := range bctx.bcs {
-			text += commentText1(bc.Pkg()) + "\n"
+			text += commentText1(bctx.glossaryNames, bc.Pkg()) + "\n"
 		}
 		text = strings.TrimSpace(text)
 		if len(text) == 0 {
@@ -32,7 +33,7 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 			md.Printf("### Anwendungsfälle\n\n")
 			for _, usecase := range bctx.useCases {
 				md.Printf("#### %s\n\n", usecase.Name())
-				text := commentText1(usecase.Fn())
+				text := commentText1(bctx.glossaryNames, usecase.Fn())
 				if text == "" {
 					md.Print("Dieser Anwendungsfall ist noch nicht dokumentiert.\n\n")
 				} else {
@@ -46,7 +47,7 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 			md.Printf("### Werte\n\n")
 			for _, a := range bctx.values {
 				md.Printf("#### %s\n\n", a.Name())
-				text := commentText1(a.TypeDef())
+				text := commentText1(bctx.glossaryNames, a.TypeDef())
 				if text == "" {
 					md.Print("Dieser Werttyp ist noch nicht dokumentiert.\n\n")
 				} else {
@@ -60,7 +61,7 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 			md.Printf("### Entitäten\n\n")
 			for _, a := range bctx.entities {
 				md.Printf("#### %s\n\n", a.Name())
-				text := commentText1(a.TypeDef())
+				text := commentText1(bctx.glossaryNames, a.TypeDef())
 				if text == "" {
 					md.Print("Diese Entität ist noch nicht dokumentiert.\n\n")
 				} else {
@@ -74,7 +75,7 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 			md.Printf("### Aggregate\n\n")
 			for _, a := range bctx.aggregates {
 				md.Printf("#### %s\n\n", a.Name())
-				text := commentText1(a.TypeDef())
+				text := commentText1(bctx.glossaryNames, a.TypeDef())
 				if text == "" {
 					md.Print("Dieses Aggregat ist noch nicht dokumentiert.\n\n")
 				} else {
@@ -87,7 +88,7 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 			md.Printf("### Domänenereignisse\n\n")
 			for _, a := range bctx.events {
 				md.Printf("#### %s\n\n", a.Name())
-				text := commentText1(a.TypeDef())
+				text := commentText1(bctx.glossaryNames, a.TypeDef())
 				if text == "" {
 					md.Print("Dieses Ereignis ist noch nicht dokumentiert.\n\n")
 				} else {
@@ -101,7 +102,7 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 			md.Printf("### Domänenservices\n\n")
 			for _, a := range bctx.services {
 				md.Printf("#### %s\n\n", a.Name())
-				text := commentText1(a.TypeDef())
+				text := commentText1(bctx.glossaryNames, a.TypeDef())
 				if text == "" {
 					md.Print("Dieser Service ist noch nicht dokumentiert.\n\n")
 				} else {
@@ -115,7 +116,7 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 			md.Printf("### Repositories\n\n")
 			for _, a := range bctx.repos {
 				md.Printf("#### %s\n\n", a.Name())
-				text := commentText1(a.TypeDef())
+				text := commentText1(bctx.glossaryNames, a.TypeDef())
 				if text == "" {
 					md.Print("Dieses Repository ist noch nicht dokumentiert.\n\n")
 				} else {
@@ -151,7 +152,7 @@ func (m *Markdown) chapterProject(md *render.Writer) {
 	if prj == nil || prj.Pkg().Comment().String() == "" {
 		md.Printf("Das Projekt ist noch nicht dokumentiert.\n\n")
 	} else {
-		md.Print(commentText1(prj.Pkg()))
+		md.Print(commentText1(nil, prj.Pkg()))
 		md.Print("\n\n")
 	}
 }
@@ -215,15 +216,16 @@ func linkify(name, target string) string {
 }
 
 type aggregatedBC struct {
-	name       string
-	bcs        []*wdl.BoundedContextAnnotation
-	useCases   []*wdl.UseCaseAnnotation
-	repos      []*wdl.RepositoryAnnotation
-	values     []*wdl.ValueAnnotation
-	entities   []*wdl.EntityAnnotation
-	aggregates []*wdl.AggregateRootAnnotation
-	events     []*wdl.DomainEventAnnotation
-	services   []*wdl.DomainServiceAnnotation
+	name          string
+	bcs           []*wdl.BoundedContextAnnotation
+	useCases      []*wdl.UseCaseAnnotation
+	repos         []*wdl.RepositoryAnnotation
+	values        []*wdl.ValueAnnotation
+	entities      []*wdl.EntityAnnotation
+	aggregates    []*wdl.AggregateRootAnnotation
+	events        []*wdl.DomainEventAnnotation
+	services      []*wdl.DomainServiceAnnotation
+	glossaryNames []string
 }
 
 func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []aggregatedBC {
@@ -241,6 +243,7 @@ func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []
 			// use cases
 			for _, usecase := range m.collectUsecases(bcAn.Pkg()) {
 				abc.useCases = append(abc.useCases, usecase)
+				abc.glossaryNames = append(abc.glossaryNames, usecase.Name())
 			}
 
 			slices.SortFunc(abc.useCases, func(a, b *wdl.UseCaseAnnotation) int {
@@ -252,6 +255,7 @@ func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []
 			// repos
 			for _, repo := range collectWithTypeDef[*wdl.RepositoryAnnotation](m, bcAn.Pkg()) {
 				abc.repos = append(abc.repos, repo)
+				abc.glossaryNames = append(abc.glossaryNames, repo.Name())
 			}
 
 			slices.SortFunc(abc.repos, func(a, b *wdl.RepositoryAnnotation) int {
@@ -263,6 +267,7 @@ func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []
 			// values
 			for _, value := range collectWithTypeDef[*wdl.ValueAnnotation](m, bcAn.Pkg()) {
 				abc.values = append(abc.values, value)
+				abc.glossaryNames = append(abc.glossaryNames, value.Name())
 			}
 
 			slices.SortFunc(abc.values, func(a, b *wdl.ValueAnnotation) int {
@@ -274,6 +279,7 @@ func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []
 			// entities
 			for _, ent := range collectWithTypeDef[*wdl.EntityAnnotation](m, bcAn.Pkg()) {
 				abc.entities = append(abc.entities, ent)
+				abc.glossaryNames = append(abc.glossaryNames, ent.Name())
 			}
 
 			slices.SortFunc(abc.entities, func(a, b *wdl.EntityAnnotation) int {
@@ -285,6 +291,7 @@ func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []
 			// aggregates
 			for _, agr := range collectWithTypeDef[*wdl.AggregateRootAnnotation](m, bcAn.Pkg()) {
 				abc.aggregates = append(abc.aggregates, agr)
+				abc.glossaryNames = append(abc.glossaryNames, agr.Name())
 			}
 
 			slices.SortFunc(abc.aggregates, func(a, b *wdl.AggregateRootAnnotation) int {
@@ -296,6 +303,7 @@ func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []
 			// events
 			for _, evt := range collectWithTypeDef[*wdl.DomainEventAnnotation](m, bcAn.Pkg()) {
 				abc.events = append(abc.events, evt)
+				abc.glossaryNames = append(abc.glossaryNames, evt.Name())
 			}
 
 			slices.SortFunc(abc.events, func(a, b *wdl.DomainEventAnnotation) int {
@@ -307,6 +315,7 @@ func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []
 			// services
 			for _, srv := range collectWithTypeDef[*wdl.DomainServiceAnnotation](m, bcAn.Pkg()) {
 				abc.services = append(abc.services, srv)
+				abc.glossaryNames = append(abc.glossaryNames, srv.Name())
 			}
 
 			slices.SortFunc(abc.services, func(a, b *wdl.DomainServiceAnnotation) int {
@@ -316,6 +325,8 @@ func (m *Markdown) collectMergedBoundedContexts(annotations []wdl.Annotation) []
 			abc.services = slices.Compact(abc.services)
 
 			// update slot
+			slices.Sort(abc.glossaryNames)
+			abc.glossaryNames = slices.Compact(abc.glossaryNames)
 			tmp[bcAn.Name()] = abc
 		}
 	}
@@ -392,7 +403,7 @@ func (m *Markdown) collectUsecases(pkg *wdl.Package) []*wdl.UseCaseAnnotation {
 	return res
 }
 
-func commentText1(e interface{ Comment() *wdl.Comment }) string {
+func commentText1(glossaryTerms []string, e interface{ Comment() *wdl.Comment }) string {
 	if e.Comment() == nil {
 		return ""
 	}
@@ -401,6 +412,11 @@ func commentText1(e interface{ Comment() *wdl.Comment }) string {
 	for _, line := range e.Comment().Lines() {
 		tmp += line.Text() + "\n"
 	}
+
+	for _, term := range glossaryTerms {
+		tmp = strings.ReplaceAll(tmp, term, linkify(term, term))
+	}
+
 	return tmp
 }
 

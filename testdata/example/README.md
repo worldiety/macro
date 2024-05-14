@@ -5,7 +5,7 @@ Dieses Projekt ist ein Beispielprojekt und zeigt die Verwendung verschiedener An
 
 ## Zeiterfassungsmanagement
 
-Package domain enthält den Bounded Context über die Zeiterfassung.
+Package domain enthält den Bounded Context über die [Zeiterfassung](#zeiterfassung).
 
 ### Anwendungsfälle
 
@@ -32,7 +32,7 @@ Dieser Werttyp ist noch nicht dokumentiert.
 
 #### Mitarbeiter
 
-Mitarbeiter arbeitet bei seinem Arbeitgeber.
+[Mitarbeiter](#mitarbeiter) arbeitet bei seinem Arbeitgeber.
 
 
 ### Aggregate
@@ -51,7 +51,7 @@ Dieser Service ist noch nicht dokumentiert.
 
 #### Zeitaufzeichnungen
 
-ZeitlogRepo manages the Zeitlogs.
+[Zeitlog](#zeitlog)Repo manages the [Zeitlog](#zeitlog)s.
 
 
 ## Berechtigungskonzept
