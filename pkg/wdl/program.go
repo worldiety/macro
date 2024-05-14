@@ -179,3 +179,19 @@ func (p *Program) PackageByPath(q PkgImportQualifier) (*Package, bool) {
 
 	return nil, false
 }
+
+func AnnotationForType[T Annotation](pg *Program, def TypeDef) T {
+	for _, annotation := range pg.annotations {
+		if tDefHolder, ok := annotation.(interface{ TypeDef() TypeDef }); ok {
+			if tDefHolder.TypeDef() != def {
+				continue
+			}
+			if t, ok := tDefHolder.(T); ok {
+				return t
+			}
+		}
+	}
+
+	var zero T
+	return zero
+}

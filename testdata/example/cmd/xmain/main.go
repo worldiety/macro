@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// #[markdown]
+// #[markdown "out":"README.md"]
 func main() {
 	var repo domain.ZeitlogRepo
 	if time.Now().UnixMilli()%10 == 0 {

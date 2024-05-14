@@ -187,6 +187,12 @@ func main() {
 }
 ```
 
+You can customize the out file, by providing the _out_ attribute:
+
+```rust
+#[markdown "out":"my-glossary.md"]
+```
+
 Then continue by annotating your bounded context packages.
 Note, that you can always define an optional human readable alias name for any of defined annotations below.
 
@@ -241,3 +247,14 @@ func (z *Zeiterfassung) ZeitBuchen(user YourWhateverDomainAuthType, mitarbeiter 
 	//...
 }
 ```
+
+To emit the complete table of all permissions, annotate the package, where you want to define your permission type and factory:
+
+```go
+// #[go.permission.generateTable]
+package supporting
+
+//...
+```
+
+See the generated [permission example](https://github.com/worldiety/macro/blob/main/testdata/example/supporting/macros.gen.go). 

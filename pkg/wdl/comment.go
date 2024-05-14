@@ -1,5 +1,7 @@
 package wdl
 
+import "strings"
+
 type Comment struct {
 	lines  []*CommentLine
 	macros []*MacroInvocation
@@ -14,6 +16,8 @@ func (c *Comment) String() string {
 		tmp += l.Text()
 		tmp += "\n"
 	}
+
+	tmp = strings.TrimSpace(tmp)
 
 	return tmp
 }

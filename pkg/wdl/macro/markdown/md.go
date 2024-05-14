@@ -19,7 +19,7 @@ func (m *Markdown) makeDoc(opts markdownParams, def wdl.TypeDef, macroInvoc *wdl
 
 			md.Printf("### Anwendungsfälle\n\n")
 			for _, usecase := range m.collectUsecases(bc.Pkg()) {
-				md.Printf("#### [%s](#%s)\n\n", usecase.Name(), usecase.Fn().Name())
+				md.Printf("#### %s\n\n", usecase.Name())
 				text := commentText1(usecase.Fn())
 				if text == "" {
 					md.Print("Dieser Anwendungsfall ist noch nicht dokumentiert.\n\n")
@@ -110,7 +110,7 @@ func (m *Markdown) chapterSecurity(md *render.Writer) {
 
 			md.Printf("|Berechtigung|Anwendungsfall|\n|----|----|\n")
 			for _, permission := range permissions {
-				md.Printf("|%s|[%s](#%s)|\n", permission.PermissionID(), m.alias(permission.TypeDef()), permission.TypeDef().Name())
+				md.Printf("|%s|[%s](#%s)|\n", permission.PermissionID(), m.alias(permission.TypeDef()), m.alias(permission.TypeDef()))
 			}
 		}
 
@@ -135,7 +135,7 @@ func (m *Markdown) chapterSecurity(md *render.Writer) {
 			md.Printf("Die folgenden Anwendungsfälle sind grundsätzlich ohne Autorisierung verwendbar, erfordern also keine Berechtigungen und werden auch nicht auditiert.\n\n")
 			md.Printf("|Berechtigung|Anwendungsfall|\n|----|----|\n")
 			for _, uc := range anonUseCases {
-				md.Printf("|jeder|[%s](#%s)|\n", m.alias(uc.Fn()), uc.Fn().Name())
+				md.Printf("|jeder|[%s](#%s)|\n", m.alias(uc.Fn()), m.alias(uc.Fn()))
 			}
 		}
 

@@ -54,7 +54,7 @@ func Aufstehen(audit Auditor) error {
 }
 
 // Cooles Zeitbuchen ist angesagt.
-// #[@Usecase]
+// #[@Usecase "Zeiten loggen"]
 // #[go.permission.audit]
 func (z *Zeiterfassung) ZeitBuchen(user User, mitarbeiter Mitarbeiter, dauer time.Duration) (int, error) {
 	if err := user.Audit("de.worldiety.aufstehen2"); err != nil {

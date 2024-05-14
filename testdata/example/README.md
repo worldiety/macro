@@ -4,15 +4,15 @@
 
 ### Anwendungsfälle
 
-#### [Aufstehen](#Aufstehen)
+#### Aufstehen
 
 Dieser Anwendungsfall ist noch nicht dokumentiert.
 
-#### [Beschwerde einreichen](#BeschwerdeEinreichen)
+#### Beschwerde einreichen
 
 Dieser Anwendungsfall ist noch nicht dokumentiert.
 
-#### [ZeitBuchen](#ZeitBuchen)
+#### Zeiten loggen
 
 Cooles Zeitbuchen ist angesagt.
 
@@ -53,10 +53,10 @@ Achtung: es kann dynamische bzw. objektbezogene Rechte in Anwendungsfällen gebe
 |Berechtigung|Anwendungsfall|
 |----|----|
 |de.worldiety.aufstehen|[Aufstehen](#Aufstehen)|
-|de.worldiety.aufstehen2|[ZeitBuchen](#ZeitBuchen)|
+|de.worldiety.aufstehen2|[Zeiten loggen](#Zeiten loggen)|
 
 Die folgenden Anwendungsfälle sind grundsätzlich ohne Autorisierung verwendbar, erfordern also keine Berechtigungen und werden auch nicht auditiert.
 
 |Berechtigung|Anwendungsfall|
 |----|----|
-|jeder|[Beschwerde einreichen](#BeschwerdeEinreichen)|
+|jeder|[Beschwerde einreichen](#Beschwerde einreichen)|

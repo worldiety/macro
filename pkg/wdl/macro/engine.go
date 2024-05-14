@@ -37,6 +37,7 @@ func NewEngine(pg *wdl.Program) *Engine {
 		annotation.NewAnnotation(pg, e.preamble),
 		NewGoTaggedUnion(pg, e.preamble),
 		audit.NewAddPermissionAnnotation(pg),
+		audit.NewGenerateTable(pg, e.preamble),
 		NewTranspileTypeScript(pg, e.preamble),
 		markdown.NewMarkdown(pg, e.preamble), // process documentation as the last process after all AST generation
 	}

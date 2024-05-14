@@ -7,3 +7,9 @@ type TextField struct {
 	Hint     string
 	MaxChars int32
 }
+
+type Seq[V any] func(yield func(V) bool)
+
+func Test(it Seq[string]) Seq[string] {
+	return nil
+}

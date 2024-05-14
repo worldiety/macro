@@ -126,6 +126,10 @@ func (s *UseCaseAnnotation) Fn() *Func {
 	return s.fn
 }
 
+func (s *UseCaseAnnotation) TypeDef() TypeDef {
+	return s.fn
+}
+
 func (s *UseCaseAnnotation) SetFn(fn *Func) {
 	s.fn = fn
 }

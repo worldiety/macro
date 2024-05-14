@@ -461,6 +461,8 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 				if typ != nil {
 					return typ, nil
 				}
+			case *types.Signature:
+				return p.makeFunc("", dstPkg, file, srcPkg, object, obj), nil
 			default:
 				slog.Error(fmt.Sprintf("named type not implemented %T@%v", obj, pos))
 			}
@@ -544,6 +546,9 @@ func (p *Program) makeFunc(receiverTypeName string, dstPkg *wdl.Package, file *w
 
 		if fnDecl != nil {
 			fn.SetBody(wdl.NewBlockStmt(func(block *wdl.BlockStmt) {
+				if fnDecl.Body == nil {
+					return // go accepts body-less function signatures, e.g. due to asm implementations
+				}
 				for _, stmt := range fnDecl.Body.List {
 					wstmt, err := convertStatement(stmt)
 					if err != nil {
@@ -590,6 +595,13 @@ func (p *Program) newParam(varr *types.Var) *wdl.Param {
 		def, err := p.getTypeDef(p.Program, ref)
 		if err != nil {
 			slog.Error("error getting def for param  of Var", "type", varr.Type(), "err", err)
+			return
+		}
+
+		if def == nil {
+			// panic("unexpected nil definition for param of Var")
+			// TODO the resulting ast is wrong and has no type def likely causing weired nil pointers later...
+			slog.Error("error getting def for param of Var", "type", varr.Type(), "err", err)
 			return
 		}
 		param.SetTypeDef(def.AsResolvedType())
