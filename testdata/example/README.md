@@ -62,11 +62,11 @@ Achtung: es kann dynamische bzw. objektbezogene Rechte in Anwendungsfällen gebe
 
 |Berechtigung|Anwendungsfall|
 |----|----|
-|de.worldiety.aufstehen|[Aufstehen](#Aufstehen)|
-|de.worldiety.aufstehen2|[Zeiten loggen](#Zeiten loggen)|
+|de.worldiety.aufstehen|[Aufstehen](#aufstehen)|
+|de.worldiety.aufstehen2|[Zeiten loggen](#zeiten-loggen)|
 
 Die folgenden Anwendungsfälle sind grundsätzlich ohne Autorisierung verwendbar, erfordern also keine Berechtigungen und werden auch nicht auditiert.
 
 |Berechtigung|Anwendungsfall|
 |----|----|
-|jeder|[Beschwerde einreichen](#Beschwerde einreichen)|
+|jeder|[Beschwerde einreichen](#beschwerde-einreichen)|

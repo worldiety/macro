@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render"
 	"path/filepath"
@@ -168,7 +169,7 @@ func (m *Markdown) chapterSecurity(md *render.Writer) {
 
 			md.Printf("|Berechtigung|Anwendungsfall|\n|----|----|\n")
 			for _, permission := range permissions {
-				md.Printf("|%s|[%s](#%s)|\n", permission.PermissionID(), m.alias(permission.TypeDef()), m.alias(permission.TypeDef()))
+				md.Printf("|%s|%s|\n", permission.PermissionID(), linkify(m.alias(permission.TypeDef()), m.alias(permission.TypeDef())))
 			}
 		}
 
@@ -198,13 +199,19 @@ func (m *Markdown) chapterSecurity(md *render.Writer) {
 			md.Printf("Die folgenden Anwendungsfälle sind grundsätzlich ohne Autorisierung verwendbar, erfordern also keine Berechtigungen und werden auch nicht auditiert.\n\n")
 			md.Printf("|Berechtigung|Anwendungsfall|\n|----|----|\n")
 			for _, uc := range anonUseCases {
-				md.Printf("|jeder|[%s](#%s)|\n", m.alias(uc.Fn()), m.alias(uc.Fn()))
+				md.Printf("|jeder|%s|\n", linkify(uc.Name(), uc.Name()))
 			}
 		}
 
 	} else {
 		md.Printf("Es sind noch keine Anwendungsfälle definiert.\n\n")
 	}
+}
+
+func linkify(name, target string) string {
+	target = strings.ToLower(target)
+	target = strings.ReplaceAll(target, " ", "-")
+	return fmt.Sprintf("[%s](#%s)", name, target)
 }
 
 type aggregatedBC struct {
