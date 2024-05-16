@@ -13,6 +13,8 @@ import (
 	"log/slog"
 	"path/filepath"
 	"reflect"
+	"strings"
+	"unicode"
 )
 
 type Program struct {
@@ -326,6 +328,11 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 							union.SetPkg(dstPkg)
 							file.AddTypeDefs(union)
 							union.SetFile(file)
+							if strings.HasPrefix(name, "_") {
+								union.SetVisibility(visibilityFromName(name[1:]))
+							} else {
+								union.SetVisibility(visibilityFromName(name))
+							}
 
 							union.SetName(wdl.Identifier(name))
 							if comment := dstPkg.TypeComments()[union.Name()]; comment != nil {
@@ -812,4 +819,20 @@ func (p *Program) getOrInstallPackage(qualifier wdl.PkgImportQualifier) (*wdl.Pa
 
 func ast2Pos(position token.Position) wdl.Pos {
 	return wdl.NewPos(position.Filename, position.Line)
+}
+
+func visibilityFromName(s string) wdl.Visibility {
+	if s == "" {
+		return wdl.PackagePrivat
+	}
+
+	if strings.HasPrefix(s, "_") {
+		return wdl.PackagePrivat
+	}
+
+	if unicode.IsLower(rune(s[0])) {
+		return wdl.PackagePrivat
+	} else {
+		return wdl.Public
+	}
 }

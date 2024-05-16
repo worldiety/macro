@@ -67,7 +67,7 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 
 	uStruct := wdl.NewStruct(func(strct *wdl.Struct) {
 		strct.SetPkg(union.Pkg())
-		strct.SetVisibility(wdl.Public)
+		strct.SetVisibility(union.Visibility())
 		strct.SetName(wdl.Identifier(stripName(union.Name().String())))
 		strct.SetComment(union.Comment())
 		strct.AddFields(

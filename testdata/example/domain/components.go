@@ -8,6 +8,11 @@ type _Component interface {
 	Button | TextField | Text | Chapter
 }
 
+// #[go.TaggedUnion]
+type _privateComponent interface {
+	Button | TextField | Text | Chapter
+}
+
 // #[go.TaggedUnion "json":"internal"]
 type _ExampleType interface {
 	Button | TextField
