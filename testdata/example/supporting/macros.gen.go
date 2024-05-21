@@ -19,7 +19,7 @@ type Permission struct {
 	desc string
 }
 
-func (p Permission) Id() string {
+func (p Permission) ID() string {
 	return p.id
 }
 

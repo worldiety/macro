@@ -82,13 +82,18 @@ func (m *GenerateTable) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 			for _, field := range rec.Fields() {
 				rec.AddMethods(
 					wdl.NewFunc(func(fn *wdl.Func) {
-						fn.SetName(field.Name())
+						name := field.Name()
+						if name == "id" {
+							name = "ID" // this is the common convention in Go
+						}
+						fn.SetName(name)
 						fn.SetVisibility(wdl.Public)
 						fn.SetReceiver(wdl.NewParam(func(param *wdl.Param) {
 							param.SetName("p")
 							param.SetTypeDef(rec.AsResolvedType())
 						}))
 						fn.SetBody(wdl.NewBlockStmt(func(block *wdl.BlockStmt) {
+
 							block.Add(wdl.RawStmt(fmt.Sprintf("return p.%s", field.Name())))
 						}))
 						fn.AddResults(wdl.NewParam(func(param *wdl.Param) {
