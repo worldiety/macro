@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render"
-	"unicode"
 )
 
 func (r *RFile) GoType(rtype *wdl.ResolvedType) string {
@@ -79,8 +78,8 @@ func goAccessorName(f interface {
 
 	switch f.Visibility() {
 	case wdl.Public:
-		return string(unicode.ToUpper(rune(f.Name().String()[0]))) + f.Name().String()[1:]
+		return MakePublic(f.Name().String())
 	default:
-		return string(unicode.ToLower(rune(f.Name().String()[0]))) + f.Name().String()[1:]
+		return MakePrivate(f.Name().String())
 	}
 }

@@ -452,6 +452,263 @@ func MatchprivateComponent[R any](e privateComponent, onButton func(Button) R, o
 	return _onDefault(e.value)
 }
 
+// This variable is declared to let linters know, that [_ÜmlautComponent] is used at compile time to generate [ÜmlautComponent].
+type _ _ÜmlautComponent
+type ÜmlautComponent struct {
+	ordinal int
+	value   any
+}
+
+func (e ÜmlautComponent) Unwrap() any {
+	return e.value
+}
+
+func (e ÜmlautComponent) Ordinal() int {
+	return e.ordinal
+}
+
+func (e ÜmlautComponent) Valid() bool {
+	return e.ordinal > 0
+}
+
+// Switch provides an exhaustive and type safe closure callback mechanic. Nil callbacks are allowed. Unmatched branches are delegated into a default case.
+func (e ÜmlautComponent) Switch(onButton func(Button), onTextField func(TextField), onText func(Text), onChapter func(Chapter), onÄpfel func(Äpfel), _onDefault func(any)) {
+	switch e.ordinal {
+	case 1:
+		if onButton != nil {
+			onButton(e.value.(Button))
+			return
+		}
+	case 2:
+		if onTextField != nil {
+			onTextField(e.value.(TextField))
+			return
+		}
+	case 3:
+		if onText != nil {
+			onText(e.value.(Text))
+			return
+		}
+	case 4:
+		if onChapter != nil {
+			onChapter(e.value.(Chapter))
+			return
+		}
+	case 5:
+		if onÄpfel != nil {
+			onÄpfel(e.value.(Äpfel))
+			return
+		}
+	}
+
+	if _onDefault != nil {
+		_onDefault(e.value)
+	}
+}
+
+func (e ÜmlautComponent) AsButton() (Button, bool) {
+	var zero Button
+	if e.ordinal == 1 {
+		return e.value.(Button), true
+	}
+
+	return zero, false
+}
+
+func (e ÜmlautComponent) WithButton(v Button) ÜmlautComponent {
+	e.ordinal = 1
+	e.value = v
+	return e
+}
+
+func (e ÜmlautComponent) AsTextField() (TextField, bool) {
+	var zero TextField
+	if e.ordinal == 2 {
+		return e.value.(TextField), true
+	}
+
+	return zero, false
+}
+
+func (e ÜmlautComponent) WithTextField(v TextField) ÜmlautComponent {
+	e.ordinal = 2
+	e.value = v
+	return e
+}
+
+func (e ÜmlautComponent) AsText() (Text, bool) {
+	var zero Text
+	if e.ordinal == 3 {
+		return e.value.(Text), true
+	}
+
+	return zero, false
+}
+
+func (e ÜmlautComponent) WithText(v Text) ÜmlautComponent {
+	e.ordinal = 3
+	e.value = v
+	return e
+}
+
+func (e ÜmlautComponent) AsChapter() (Chapter, bool) {
+	var zero Chapter
+	if e.ordinal == 4 {
+		return e.value.(Chapter), true
+	}
+
+	return zero, false
+}
+
+func (e ÜmlautComponent) WithChapter(v Chapter) ÜmlautComponent {
+	e.ordinal = 4
+	e.value = v
+	return e
+}
+
+func (e ÜmlautComponent) AsÄpfel() (Äpfel, bool) {
+	var zero Äpfel
+	if e.ordinal == 5 {
+		return e.value.(Äpfel), true
+	}
+
+	return zero, false
+}
+
+func (e ÜmlautComponent) WithÄpfel(v Äpfel) ÜmlautComponent {
+	e.ordinal = 5
+	e.value = v
+	return e
+}
+
+func (e ÜmlautComponent) MarshalJSON() ([]byte, error) {
+	if e.ordinal == 0 {
+		return nil, fmt.Errorf("marshalling a zero value is not allowed")
+	}
+
+	// note, that by definition, this kind of encoding does not work with union types which evaluates to null, arrays or primitives.
+	// Chose adjacent encoding instead.
+	type adjacentlyTagged[T any] struct {
+		Type  string `json:"type"`
+		Value T      `json:"content"`
+	}
+
+	switch e.ordinal {
+	case 1:
+		return json.Marshal(adjacentlyTagged[Button]{
+			Type:  "Button",
+			Value: e.value.(Button),
+		})
+	case 2:
+		return json.Marshal(adjacentlyTagged[TextField]{
+			Type:  "TextField",
+			Value: e.value.(TextField),
+		})
+	case 3:
+		return json.Marshal(adjacentlyTagged[Text]{
+			Type:  "Text",
+			Value: e.value.(Text),
+		})
+	case 4:
+		return json.Marshal(adjacentlyTagged[Chapter]{
+			Type:  "Chapter",
+			Value: e.value.(Chapter),
+		})
+	case 5:
+		return json.Marshal(adjacentlyTagged[Äpfel]{
+			Type:  "Äpfel",
+			Value: e.value.(Äpfel),
+		})
+	default:
+		return nil, fmt.Errorf("unknown type ordinal variant '%d'", e.ordinal)
+	}
+}
+
+func (e *ÜmlautComponent) UnmarshalJSON(bytes []byte) error {
+	typeOnly := struct {
+		Type string `json:"type"`
+	}{}
+	if err := json.Unmarshal(bytes, &typeOnly); err != nil {
+		return err
+	}
+	type adjacentlyTagged[T any] struct {
+		Type  string `json:"type"`
+		Value T      `json:"content"`
+	}
+	switch typeOnly.Type {
+	case "Button":
+		var value adjacentlyTagged[Button]
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Button'")
+		}
+		e.ordinal = 1
+		e.value = value.Value
+	case "TextField":
+		var value adjacentlyTagged[TextField]
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'TextField'")
+		}
+		e.ordinal = 2
+		e.value = value.Value
+	case "Text":
+		var value adjacentlyTagged[Text]
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Text'")
+		}
+		e.ordinal = 3
+		e.value = value.Value
+	case "Chapter":
+		var value adjacentlyTagged[Chapter]
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Chapter'")
+		}
+		e.ordinal = 4
+		e.value = value.Value
+	case "Äpfel":
+		var value adjacentlyTagged[Äpfel]
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Äpfel'")
+		}
+		e.ordinal = 5
+		e.value = value.Value
+	default:
+		return fmt.Errorf("unknown type variant name '%s'", typeOnly.Type)
+	}
+
+	return nil
+}
+
+func MatchÜmlautComponent[R any](e ÜmlautComponent, onButton func(Button) R, onTextField func(TextField) R, onText func(Text) R, onChapter func(Chapter) R, onÄpfel func(Äpfel) R, _onDefault func(any) R) R {
+	if _onDefault == nil {
+		panic(`missing default match: cannot guarantee exhaustive matching`)
+	}
+
+	switch e.ordinal {
+	case 1:
+		if onButton != nil {
+			return onButton(e.value.(Button))
+		}
+	case 2:
+		if onTextField != nil {
+			return onTextField(e.value.(TextField))
+		}
+	case 3:
+		if onText != nil {
+			return onText(e.value.(Text))
+		}
+	case 4:
+		if onChapter != nil {
+			return onChapter(e.value.(Chapter))
+		}
+	case 5:
+		if onÄpfel != nil {
+			return onÄpfel(e.value.(Äpfel))
+		}
+	}
+
+	return _onDefault(e.value)
+}
+
 // This variable is declared to let linters know, that [_ExampleType] is used at compile time to generate [ExampleType].
 type _ _ExampleType
 type ExampleType struct {

@@ -107,11 +107,13 @@ func tsUpperName(f interface {
 }
 
 func tsUpperNameStr(s string) string {
-	return string(unicode.ToUpper(rune(s[0]))) + s[1:]
+	first, rest := wdl.SplitFirstRune(s)
+	return string(unicode.ToUpper(first)) + rest
 }
 
 func tsLowerNameStr(s string) string {
-	return string(unicode.ToLower(rune(s[0]))) + s[1:]
+	first, rest := wdl.SplitFirstRune(s)
+	return string(unicode.ToLower(first)) + rest
 }
 
 func tsLowerName(f interface {

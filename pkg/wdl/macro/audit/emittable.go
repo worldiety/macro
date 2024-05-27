@@ -65,7 +65,7 @@ func (m *GenerateTable) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 			rec.SetVisibility(wdl.Public)
 			rec.AddFields(
 				wdl.NewField(func(field *wdl.Field) {
-					field.SetName("id")
+					field.SetName("identity")
 					field.SetTypeDef(m.prog.MustResolveSimple("std", "string"))
 				}),
 				wdl.NewField(func(field *wdl.Field) {

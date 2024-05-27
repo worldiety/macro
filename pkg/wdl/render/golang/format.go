@@ -2,6 +2,7 @@ package golang
 
 import (
 	"fmt"
+	"github.com/worldiety/macro/pkg/wdl"
 	"go/format"
 	"strings"
 	"unicode"
@@ -30,7 +31,8 @@ func MakePrivate(str string) string {
 	case "ID":
 		return "id"
 	default:
-		return string(unicode.ToLower(rune(str[0]))) + str[1:]
+		first, rest := wdl.SplitFirstRune(str)
+		return string(unicode.ToLower(first)) + rest
 	}
 }
 
@@ -46,7 +48,8 @@ func MakePublic(str string) string {
 	case "id":
 		return "ID"
 	default:
-		return string(unicode.ToUpper(rune(str[0]))) + str[1:]
+		first, rest := wdl.SplitFirstRune(str)
+		return string(unicode.ToUpper(first)) + rest
 	}
 }
 

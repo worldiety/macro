@@ -830,7 +830,8 @@ func visibilityFromName(s string) wdl.Visibility {
 		return wdl.PackagePrivat
 	}
 
-	if unicode.IsLower(rune(s[0])) {
+	first, _ := wdl.SplitFirstRune(s)
+	if unicode.IsLower(first) {
 		return wdl.PackagePrivat
 	} else {
 		return wdl.Public

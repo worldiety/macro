@@ -13,10 +13,17 @@ type _privateComponent interface {
 	Button | TextField | Text | Chapter
 }
 
+// #[go.TaggedUnion]
+type _ÜmlautComponent interface {
+	Button | TextField | Text | Chapter | Äpfel
+}
+
 // #[go.TaggedUnion "json":"internal"]
 type _ExampleType interface {
 	Button | TextField
 }
+
+type Äpfel string
 
 type Blub error
 
