@@ -30,7 +30,7 @@ func (m *AddPermissionAnnotation) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroI
 	}
 
 	if fn.Body() == nil || len(fn.Body().List()) == 0 {
-		return wdl.NewErrorWithPos(macroInvoc.Pos(), fmt.Errorf("function has has empty body"))
+		return wdl.NewErrorWithPos(macroInvoc.Pos(), fmt.Errorf("function has empty body"))
 	}
 
 	ifStmt, ok := fn.Body().List()[0].(*wdl.IfStmt)

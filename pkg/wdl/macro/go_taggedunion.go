@@ -31,7 +31,7 @@ func NewGoTaggedUnion(prog *wdl.Program, preamble string) *GoTaggedUnion {
 }
 
 func (m *GoTaggedUnion) Names() []wdl.MacroName {
-	return []wdl.MacroName{"go.TaggedUnion"}
+	return []wdl.MacroName{"go.TaggedUnion", "enum"}
 }
 
 func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation) error {
