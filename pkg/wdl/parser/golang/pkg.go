@@ -640,6 +640,28 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			}
 		}), nil
 
+	case types.Float64:
+		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+			dType.SetName(wdl.Identifier(name))
+			dstPkg.AddTypeDefs(dType)
+			dType.SetPkg(dstPkg)
+			dType.SetUnderlying(p.Program.MustResolveSimple("std", "float64").TypeDef())
+
+			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+				dType.SetComment(comment)
+			}
+		}), nil
+	case types.Float32:
+		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
+			dType.SetName(wdl.Identifier(name))
+			dstPkg.AddTypeDefs(dType)
+			dType.SetPkg(dstPkg)
+			dType.SetUnderlying(p.Program.MustResolveSimple("std", "float32").TypeDef())
+
+			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+				dType.SetComment(comment)
+			}
+		}), nil
 	case types.Int:
 		return wdl.NewDistinctType(func(dType *wdl.DistinctType) {
 			dType.SetName(wdl.Identifier(name))
