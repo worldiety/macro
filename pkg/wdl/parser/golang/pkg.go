@@ -222,6 +222,11 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 		return def, nil
 	}
 
+	// check short-circuit special buildin types
+	if special, ok := p.asSpecialBuildIn(ref); ok {
+		return special, nil
+	}
+
 	// treat as new package and/or type
 	var srcPkg *packages.Package
 	for _, pkg := range p.Pkgs {
@@ -613,6 +618,18 @@ func (p *Program) newParam(varr *types.Var) *wdl.Param {
 		}
 		param.SetTypeDef(def.AsResolvedType())
 	})
+}
+
+func (p *Program) asSpecialBuildIn(ref *wdl.TypeRef) (wdl.TypeDef, bool) {
+	switch ref.Qualifier {
+	case "time":
+		switch ref.Name {
+		case "Duration":
+			return p.Program.MustResolveSimple("std", "Duration").TypeDef(), true
+		}
+	}
+
+	return nil, false
 }
 
 func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name string) (wdl.TypeDef, error) {

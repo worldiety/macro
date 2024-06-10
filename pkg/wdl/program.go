@@ -68,6 +68,11 @@ func NewProgram(with func(program *Program)) *Program {
 			}),
 			NewBaseType(func(bt *BaseType) {
 				bt.SetPkg(p)
+				bt.SetName("Duration")
+				bt.SetKind(TInt64)
+			}),
+			NewBaseType(func(bt *BaseType) {
+				bt.SetPkg(p)
 				bt.SetName("uint32")
 				bt.SetKind(TUInt32)
 			}),
