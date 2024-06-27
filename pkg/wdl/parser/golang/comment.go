@@ -1,14 +1,31 @@
 package golang
 
 import (
+	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
 	"go/ast"
 	"golang.org/x/tools/go/packages"
+	"log/slog"
 	"strings"
 )
 
-func makeIdentComments(pkg *packages.Package) (map[wdl.Identifier]*wdl.Comment, error) {
-	res := make(map[wdl.Identifier]*wdl.Comment)
+func unpackStarExpr(e ast.Expr) string {
+	switch exp := e.(type) {
+	case *ast.StarExpr:
+		return unpackStarExpr(exp.X)
+	case *ast.Ident:
+		return exp.Name
+	case *ast.IndexExpr:
+		return unpackStarExpr(exp.X)
+	case *ast.IndexListExpr:
+		return unpackStarExpr(exp.X)
+	}
+
+	panic(e)
+}
+
+func makeIdentComments(pkg *packages.Package) (map[wdl.MangeledName]*wdl.Comment, error) {
+	res := make(map[wdl.MangeledName]*wdl.Comment)
 	// collect the paired ident and ast comments
 	typeDeclrComments := map[string]*ast.CommentGroup{}
 	for _, syntax := range pkg.Syntax {
@@ -17,33 +34,45 @@ func makeIdentComments(pkg *packages.Package) (map[wdl.Identifier]*wdl.Comment, 
 			switch decl := decl.(type) {
 			case *ast.FuncDecl:
 				if decl.Doc != nil {
-					typeDeclrComments[decl.Name.Name] = decl.Doc
+					mangelName := decl.Name.Name
+					if decl.Recv != nil && len(decl.Recv.List) > 0 {
+						mangelName = unpackStarExpr(decl.Recv.List[0].Type) + "." + mangelName
+					}
+					typeDeclrComments[mangelName] = decl.Doc
 					continue nextDeclr
 				}
 			case *ast.GenDecl:
-				if decl.Doc != nil {
-					for _, spec := range decl.Specs {
-						if spec, ok := spec.(*ast.TypeSpec); ok {
+				for _, spec := range decl.Specs {
+					if spec, ok := spec.(*ast.TypeSpec); ok {
 
-							switch def := spec.Type.(type) {
-							case *ast.StructType:
-								for _, field := range def.Fields.List {
-									if field.Doc != nil {
-										for _, name := range field.Names {
-											typeDeclrComments[spec.Name.Name+"."+name.Name] = field.Doc
-										}
+						switch def := spec.Type.(type) {
+						case *ast.StructType:
+							for _, field := range def.Fields.List {
+								if field.Doc != nil {
+									for _, name := range field.Names {
+										typeDeclrComments[spec.Name.Name+"."+name.Name] = field.Doc
 									}
 								}
 							}
-
-							if spec.Name != nil {
-								typeDeclrComments[spec.Name.Name] = decl.Doc
-								continue nextDeclr
+						case *ast.InterfaceType:
+							for _, method := range def.Methods.List {
+								if method.Doc != nil {
+									for _, name := range method.Names {
+										typeDeclrComments[spec.Name.Name+"."+name.Name] = method.Doc
+									}
+								}
 							}
+						default:
+							slog.Info("ignored comment genDecl", "type", fmt.Sprintf("%T", spec.Type))
+						}
+
+						if spec.Name != nil && decl.Doc != nil {
+							typeDeclrComments[spec.Name.Name] = decl.Doc
+							continue nextDeclr
 						}
 					}
-
 				}
+
 			}
 
 		}
@@ -56,7 +85,7 @@ func makeIdentComments(pkg *packages.Package) (map[wdl.Identifier]*wdl.Comment, 
 			return nil, err
 		}
 
-		res[wdl.Identifier(ident)] = wdlComment
+		res[wdl.MangeledName(ident)] = wdlComment
 	}
 
 	return res, nil

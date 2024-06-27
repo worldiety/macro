@@ -11,7 +11,18 @@ Package domain enthält den Bounded Context über die [Zeiterfassung](#zeiterfas
 
 #### Aufstehen
 
-Dieser Anwendungsfall ist noch nicht dokumentiert.
+hello
+
+
+#### Aufstehen in der Zeiterfassung
+
+[Aufstehen](#aufstehen) [Zeiterfassung](#zeiterfassung)smethode
+
+
+#### Aufstehen woanders
+
+[Aufstehen](#aufstehen) [Zeiterfassung](#zeiterfassung)smethode
+
 
 #### Beschwerde einreichen
 
@@ -64,6 +75,8 @@ Achtung: es kann dynamische bzw. objektbezogene Rechte in Anwendungsfällen gebe
 |----|----|
 |de.worldiety.aufstehen|[Aufstehen](#aufstehen)|
 |de.worldiety.aufstehen2|[Zeiten loggen](#zeiten-loggen)|
+|de.worldiety.woanders.aufstehen|[Aufstehen woanders](#aufstehen-woanders)|
+|de.worldiety.zeiterfassung.aufstehen|[Aufstehen in der Zeiterfassung](#aufstehen-in-der-zeiterfassung)|
 
 Die folgenden Anwendungsfälle sind grundsätzlich ohne Autorisierung verwendbar, erfordern also keine Berechtigungen und werden auch nicht auditiert.
 

@@ -6,8 +6,10 @@ package supporting
 // Each use case, which requires some sort of auditing, has its individual permission.
 func Permissions() []Permission {
 	return []Permission{
+		{"de.worldiety.zeiterfassung.aufstehen", "Aufstehen in der Zeiterfassung", "Aufstehen Zeiterfassungsmethode"},
 		{"de.worldiety.aufstehen2", "Zeiten loggen", "Cooles Zeitbuchen ist angesagt."},
-		{"de.worldiety.aufstehen", "Aufstehen", ""},
+		{"de.worldiety.aufstehen", "Aufstehen", "hello"},
+		{"de.worldiety.woanders.aufstehen", "Aufstehen woanders", "Aufstehen Zeiterfassungsmethode"},
 	}
 }
 

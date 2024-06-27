@@ -21,6 +21,9 @@ func main() {
 	service := domain.NewZeiterfassung(repo)
 	service.ZeitBuchen(supporting.User{}, domain.Mitarbeiter{}, 12)
 	domain.Aufstehen(NagoAuditor{})
+	var dh domain.Human
+	dh.Aufstehen(nil)
+	service.Aufstehen(nil)
 }
 
 type NagoAuditor struct {

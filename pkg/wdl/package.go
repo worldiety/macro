@@ -17,11 +17,12 @@ type PkgName Identifier
 //   - Rust: std::io
 type PkgImportQualifier string
 
+type MangeledName string
 type Package struct {
 	name         Identifier
 	qualifier    PkgImportQualifier
 	typeDefs     []TypeDef
-	typeComments map[Identifier]*Comment
+	typeComments map[MangeledName]*Comment
 	comment      *Comment
 	files        []*File
 }
@@ -79,11 +80,11 @@ func (p *Package) AddFiles(files ...*File) {
 	p.files = append(p.files, files...)
 }
 
-func (p *Package) TypeComments() map[Identifier]*Comment {
+func (p *Package) TypeComments() map[MangeledName]*Comment {
 	return p.typeComments
 }
 
-func (p *Package) SetTypeComments(typeComments map[Identifier]*Comment) {
+func (p *Package) SetTypeComments(typeComments map[MangeledName]*Comment) {
 	p.typeComments = typeComments
 }
 

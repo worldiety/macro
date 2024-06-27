@@ -166,7 +166,25 @@ func (p *Program) TypeDef(ref *TypeRef) (TypeDef, bool) {
 		if pkg.Qualifier() == ref.Qualifier {
 			for _, def := range pkg.TypeDefs() {
 				if ref.Name == def.Name() {
-					return def, true
+					if fn, ok := def.AsResolvedType().TypeDef().(*Func); ok {
+						if (fn.Receiver() == nil && ref.Receiver != nil) || (fn.Receiver() != nil && ref.Receiver == nil) {
+							continue
+						}
+
+						// so either both receivers are nil or not nil
+						if fn.Receiver() != nil {
+							candidate := fn.Receiver().TypeDef().AsTypeRef()
+							if ref.Receiver.Name == candidate.Name {
+								return def, true
+							}
+						} else {
+							return def, true
+						}
+
+					} else {
+						return def, true
+					}
+
 				}
 			}
 		}

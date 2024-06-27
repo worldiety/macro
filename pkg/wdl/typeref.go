@@ -5,8 +5,8 @@ type TypeRef struct {
 	Name      Identifier
 	Pointer   bool
 	Params    []*TypeRef
-	TypeParam bool // TODO how to model bound (go) and upper and lower bounds (java)
-
+	TypeParam bool     // TODO how to model bound (go) and upper and lower bounds (java)
+	Receiver  *TypeRef // a TypeRef may also reference a function or method, so we need to distinguish those collisions
 }
 
 func (t TypeRef) String() string {

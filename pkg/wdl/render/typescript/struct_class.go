@@ -3,6 +3,7 @@ package typescript
 import (
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render"
+	"strings"
 )
 
 func (r *RFile) renderStructClass(def *wdl.Struct, w *render.Writer) error {
@@ -57,7 +58,12 @@ func (r *RFile) renderStructClass(def *wdl.Struct, w *render.Writer) error {
 
 func fieldName(f *wdl.Field) string {
 	if v, ok := f.Tags()["json"]; ok {
-		return v
+		opts := strings.Split(v, ",")
+		if len(opts) == 1 {
+			return opts[0]
+		}
+
+		return opts[0] + "/*" + opts[1] + "*/"
 	}
 
 	return f.Name().String() // without tag, in go the name will get serialized as uppercase, we must not change that

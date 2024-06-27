@@ -120,11 +120,30 @@ func (p *Program) init() error {
 			for _, decl := range syntax.Decls {
 				switch t := decl.(type) {
 				case *ast.FuncDecl:
-					_, err := p.getTypeDef(p.Program, &wdl.TypeRef{
+					fnRef := &wdl.TypeRef{
 						Qualifier: wdl.PkgImportQualifier(pkg.PkgPath),
 						Name:      wdl.Identifier(t.Name.Name),
-					})
+					}
 
+					if t.Recv != nil {
+						recRef := &wdl.TypeRef{
+							Qualifier: wdl.PkgImportQualifier(pkg.PkgPath),
+							Name:      wdl.Identifier(unpackStarExpr(t.Recv.List[0].Type)),
+						}
+						rec, err := p.getTypeDef(p.Program, recRef)
+						if err != nil {
+							return err
+						}
+						if rec == nil {
+							slog.Error("cannot resolve required receiver for function", "func", fnRef.Name, "receiver", recRef)
+							continue
+						}
+						fnRef.Receiver = rec.AsResolvedType().AsTypeRef()
+					}
+
+					fn, err := p.getTypeDef(p.Program, fnRef)
+
+					_ = fn
 					if err != nil {
 						return err
 					}
@@ -249,6 +268,8 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 	var objPos token.Position
 	for ident, object := range srcPkg.TypesInfo.Defs {
 
+		//fmt.Println("!!! type def", srcPkg.Name, ident, fmt.Sprintf("%T", object))
+
 		if object == nil {
 			continue
 		}
@@ -260,11 +281,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 		if ident.Name != string(ref.Name) {
 			continue
 		}
-		fmt.Println("source type:", srcPkg.PkgPath, ident.Name)
-		if object.Name() != ident.Name {
-			panic("wtf 1")
-		}
-
+	
 		found = true
 
 		pos := srcPkg.Fset.Position(object.Pos())
@@ -296,7 +313,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 					file.AddTypeDefs(iface)
 
 					iface.SetName(wdl.Identifier(name))
-					if comment := dstPkg.TypeComments()[iface.Name()]; comment != nil {
+					if comment := dstPkg.TypeComments()[wdl.MangeledName(iface.Name())]; comment != nil {
 						iface.SetComment(comment)
 					}
 				})
@@ -314,7 +331,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 
 							fn.SetName(wdl.Identifier(method.Name()))
 							// TODO this is not possible for iface methods and even wrong for global funcs
-							if comment := dstPkg.TypeComments()[fn.Name()]; comment != nil {
+							if comment := dstPkg.TypeComments()[wdl.MangeledName(namedObj.Obj().Name()+"."+fn.Name().String())]; comment != nil {
 								fn.SetComment(comment)
 							}
 						}))
@@ -340,7 +357,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 							}
 
 							union.SetName(wdl.Identifier(name))
-							if comment := dstPkg.TypeComments()[union.Name()]; comment != nil {
+							if comment := dstPkg.TypeComments()[wdl.MangeledName(union.Name())]; comment != nil {
 								union.SetComment(comment)
 							}
 
@@ -387,7 +404,9 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 					if ref.Name.String() != name {
 						//panic(fmt.Errorf("WTF %s vs %s", ref.Name, name)) TODO fix me this happens for alias
 					}
-					if comment := dstPkg.TypeComments()[strct.Name()]; comment != nil {
+
+					// TODO structs may also be namespaced within other types (anon) or funcs or methods
+					if comment := dstPkg.TypeComments()[wdl.MangeledName(strct.Name())]; comment != nil {
 						strct.SetComment(comment)
 					}
 
@@ -403,7 +422,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 						f := obj.Field(fidx)
 						strct.AddFields(wdl.NewField(func(field *wdl.Field) {
 							field.SetName(wdl.Identifier(f.Name()))
-							if fieldComment := dstPkg.TypeComments()[strct.Name()+"."+field.Name()]; fieldComment != nil {
+							if fieldComment := dstPkg.TypeComments()[wdl.MangeledName(strct.Name()+"."+field.Name())]; fieldComment != nil {
 								field.SetComment(fieldComment)
 							}
 
@@ -456,10 +475,6 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 								return
 							}
 
-							if f.Name() == "Caption" {
-								fmt.Println("!!!", ref)
-							}
-
 							field.SetTypeDef(ftype.AsResolvedType())
 						}))
 					}
@@ -473,6 +488,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 				if typ != nil {
 					return typ, nil
 				}
+
 			case *types.Signature:
 				return p.makeFunc("", dstPkg, file, srcPkg, object, obj), nil
 			default:
@@ -504,6 +520,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 		fmt.Printf("%T", obj.Elem())
 		*/
 		//asobj.Elem()
+
 		case *types.Signature:
 			// TODO we have them twice, once as a package level but with receiver and once per actual type, we certainly should resolve to a single instance
 			return p.makeFunc("", dstPkg, file, srcPkg, object, obj), nil
@@ -518,11 +535,42 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 }
 
 func (p *Program) makeFunc(receiverTypeName string, dstPkg *wdl.Package, file *wdl.File, srcPkg *packages.Package, nobj types.Object, obj *types.Signature) *wdl.Func {
+	var rec *wdl.TypeRef
+	if receiverTypeName != "" {
+		rec = &wdl.TypeRef{
+			Qualifier: dstPkg.Qualifier(),
+			Name:      wdl.Identifier(receiverTypeName),
+		}
+	}
+	def, _ := p.Program.TypeDef(&wdl.TypeRef{
+		Qualifier: dstPkg.Qualifier(),
+		Name:      wdl.Identifier(nobj.Name()),
+		Receiver:  rec,
+	})
+
+	// shortcircuit
+	if fn, ok := def.(*wdl.Func); ok {
+		return fn
+	}
+
 	return wdl.NewFunc(func(fn *wdl.Func) {
 		fn.SetName(wdl.Identifier(nobj.Name()))
 		dstPkg.AddTypeDefs(fn)
 		fn.SetPkg(dstPkg)
 		file.AddTypeDefs(fn)
+		if receiverTypeName != "" {
+			fn.SetReceiver(wdl.NewParam(func(param *wdl.Param) {
+				def, err := p.getTypeDef(p.Program, &wdl.TypeRef{
+					Qualifier: dstPkg.Qualifier(),
+					Name:      wdl.Identifier(receiverTypeName),
+				})
+				if err != nil {
+					slog.Error("error getting def for receiver type", "type", receiverTypeName, "err", err)
+				} else {
+					param.SetTypeDef(def.AsResolvedType())
+				}
+			}))
+		}
 
 		if nobj.Exported() {
 			fn.SetVisibility(wdl.Public)
@@ -535,6 +583,10 @@ func (p *Program) makeFunc(receiverTypeName string, dstPkg *wdl.Package, file *w
 			for _, decl := range syntaxFile.Decls {
 				if astFn, ok := decl.(*ast.FuncDecl); ok {
 					if astFn.Name != nil && astFn.Name.Name == nobj.Name() {
+						if receiverTypeName != "" && (astFn.Recv == nil || len(astFn.Recv.List) == 0) {
+							continue
+						}
+
 						if receiverTypeName != "" && astFn.Recv != nil && len(astFn.Recv.List) > 0 {
 							name := ""
 							switch def := astFn.Recv.List[0].Type.(type) {
@@ -570,6 +622,8 @@ func (p *Program) makeFunc(receiverTypeName string, dstPkg *wdl.Package, file *w
 					block.Add(wstmt)
 				}
 			}))
+		} else {
+			slog.Warn("cannot find fnDecl for ", "mangled", receiverTypeName+"."+nobj.Name())
 		}
 
 		for tpidx := range obj.TypeParams().Len() {
@@ -580,7 +634,11 @@ func (p *Program) makeFunc(receiverTypeName string, dstPkg *wdl.Package, file *w
 			}))
 		}
 
-		if comment := dstPkg.TypeComments()[fn.Name()]; comment != nil {
+		commentLookupName := wdl.MangeledName(fn.Name().String())
+		if receiverTypeName != "" {
+			commentLookupName = wdl.MangeledName(receiverTypeName + "." + fn.Name().String())
+		}
+		if comment := dstPkg.TypeComments()[commentLookupName]; comment != nil {
 			fn.SetComment(comment)
 		}
 
@@ -641,7 +699,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "bool").TypeDef())
 
-			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+			if comment := dstPkg.TypeComments()[wdl.MangeledName(name)]; comment != nil {
 				dType.SetComment(comment)
 			}
 		}), nil
@@ -652,7 +710,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "string").TypeDef())
 
-			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+			if comment := dstPkg.TypeComments()[wdl.MangeledName(name)]; comment != nil {
 				dType.SetComment(comment)
 			}
 		}), nil
@@ -664,7 +722,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "float64").TypeDef())
 
-			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+			if comment := dstPkg.TypeComments()[wdl.MangeledName(name)]; comment != nil {
 				dType.SetComment(comment)
 			}
 		}), nil
@@ -675,7 +733,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "float32").TypeDef())
 
-			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+			if comment := dstPkg.TypeComments()[wdl.MangeledName(name)]; comment != nil {
 				dType.SetComment(comment)
 			}
 		}), nil
@@ -686,7 +744,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int").TypeDef())
 
-			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+			if comment := dstPkg.TypeComments()[wdl.MangeledName(name)]; comment != nil {
 				dType.SetComment(comment)
 			}
 		}), nil
@@ -697,7 +755,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int32").TypeDef())
 
-			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+			if comment := dstPkg.TypeComments()[wdl.MangeledName(name)]; comment != nil {
 				dType.SetComment(comment)
 			}
 		}), nil
@@ -708,7 +766,7 @@ func (p *Program) fromBasicType(dstPkg *wdl.Package, obj *types.Basic, name stri
 			dType.SetPkg(dstPkg)
 			dType.SetUnderlying(p.Program.MustResolveSimple("std", "int64").TypeDef())
 
-			if comment := dstPkg.TypeComments()[wdl.Identifier(name)]; comment != nil {
+			if comment := dstPkg.TypeComments()[wdl.MangeledName(name)]; comment != nil {
 				dType.SetComment(comment)
 			}
 		}), nil

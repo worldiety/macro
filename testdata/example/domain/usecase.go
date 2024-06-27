@@ -43,6 +43,7 @@ type Auditor interface {
 	Audit(string) error
 }
 
+// hello
 // #[@Usecase]
 // #[go.permission.audit]
 func Aufstehen(audit Auditor) error {
@@ -51,6 +52,36 @@ func Aufstehen(audit Auditor) error {
 	}
 
 	return nil
+}
+
+// Aufstehen Zeiterfassungsmethode
+// #[@Usecase "Aufstehen in der Zeiterfassung"]
+// #[go.permission.audit]
+func (z *Zeiterfassung) Aufstehen(audit Auditor) error {
+	if err := audit.Audit("de.worldiety.zeiterfassung.aufstehen"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type Other struct {
+}
+
+// Aufstehen Zeiterfassungsmethode
+// #[@Usecase "Aufstehen woanders"]
+// #[go.permission.audit]
+func (z *Other) Aufstehen(audit Auditor) error {
+	if err := audit.Audit("de.worldiety.woanders.aufstehen"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type Human interface {
+	// Human Aufstehen doc
+	Aufstehen(audit Auditor) error
 }
 
 // Cooles Zeitbuchen ist angesagt.
