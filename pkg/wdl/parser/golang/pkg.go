@@ -281,7 +281,7 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 		if ident.Name != string(ref.Name) {
 			continue
 		}
-	
+
 		found = true
 
 		pos := srcPkg.Fset.Position(object.Pos())

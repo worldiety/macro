@@ -112,6 +112,7 @@ func tsUpperNameStr(s string) string {
 }
 
 func tsLowerNameStr(s string) string {
+	s = strings.TrimLeft(s, "._")
 	first, rest := wdl.SplitFirstRune(s)
 	return string(unicode.ToLower(first)) + rest
 }
