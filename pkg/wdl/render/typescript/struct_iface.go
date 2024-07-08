@@ -35,10 +35,14 @@ func (r *RFile) renderStructIface(def *wdl.Struct, w *render.Writer) error {
 		if constValue, ok := field.Tags()["const"]; ok {
 			w.Printf("    %s: '%s'/*%s*/;\n", fieldName(field), constValue, r.TsType(field.TypeDef()))
 		} else {
+			jsOpt := ""
+			if looksLikeOptionHack(field.TypeDef()) {
+				jsOpt = "?"
+			}
 			if fname == tsLowerNameStr(field.Name().String()) {
-				w.Printf("    %s: %s;\n", fieldName(field), r.TsType(field.TypeDef()))
+				w.Printf("    %s%s: %s;\n", fieldName(field), jsOpt, r.TsType(field.TypeDef()))
 			} else {
-				w.Printf("    %s /*%s*/: %s;\n", fieldName(field), field.Name(), r.TsType(field.TypeDef()))
+				w.Printf("    %s%s /*%s*/: %s;\n", fieldName(field), jsOpt, field.Name(), r.TsType(field.TypeDef()))
 			}
 		}
 

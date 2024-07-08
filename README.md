@@ -37,7 +37,19 @@ Consider some source code like
 
 ```go
 // A Component is a sum type or tagged union.
+// This is the default notation with adjacent encoding, which supports all types.
+//
+// #[enum]
+type _Component interface {
+	Button | TextField | Text | Chapter | xcompo.RichText | xcompo.Icon | string | []string | []Text
+}
+
+```
+
+```go
+// A Component is a sum type or tagged union.
 // Actually, we can generate different flavors, so that Go makes fun for modelling business stuff.
+// Note, that this encoding variant only works for structs by definition.
 //
 // #[go.TaggedUnion "json":"internal", "tag":"type"]
 type _Component interface {

@@ -9,6 +9,10 @@ import (
 	"unicode"
 )
 
+func looksLikeOptionHack(rtype *wdl.ResolvedType) bool {
+	return rtype.Name() == "Option" && len(rtype.Params()) == 1
+}
+
 func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 	if rtype == nil {
 		return "'no type resolved'"
@@ -17,6 +21,11 @@ func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 
 	if rtype.TypeParam() {
 		return rtype.Name().String()
+	}
+
+	// special Option hack, which just applies to "all Option[T]" types
+	if looksLikeOptionHack(rtype) {
+		return r.TsType(rtype.Params()[0])
 	}
 
 	r.Use(rtype)
