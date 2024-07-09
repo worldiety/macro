@@ -3,6 +3,7 @@ package typescript
 import (
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render"
+	"strings"
 )
 
 func (r *RFile) renderStructIface(def *wdl.Struct, w *render.Writer) error {
@@ -32,11 +33,17 @@ func (r *RFile) renderStructIface(def *wdl.Struct, w *render.Writer) error {
 			w.Printf("\n")
 			r.parent.writeCommentNode(w, false, fname, 4, field.Comment())
 		}
+
+		hasOmitTag := false
+		if jsonTag, ok := field.Tags()["json"]; ok {
+			hasOmitTag = strings.Contains(jsonTag, "omitempty")
+		}
+
 		if constValue, ok := field.Tags()["const"]; ok {
 			w.Printf("    %s: '%s'/*%s*/;\n", fieldName(field), constValue, r.TsType(field.TypeDef()))
 		} else {
 			jsOpt := ""
-			if looksLikeOptionHack(field.TypeDef()) {
+			if hasOmitTag || looksLikeOptionHack(field.TypeDef()) {
 				jsOpt = "?"
 			}
 			if fname == tsLowerNameStr(field.Name().String()) {
