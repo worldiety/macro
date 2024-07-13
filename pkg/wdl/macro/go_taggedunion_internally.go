@@ -41,7 +41,7 @@ func (m *GoTaggedUnion) goTaggedUnionJSONInternallyTagged(opts goTaggedUnionPara
 						strCaseConst = wdl.Identifier(opts.Names[idx])
 					}
 					tmp += fmt.Sprintf("case %d:\n", ord)
-					tmp += fmt.Sprintf("prefix = []byte(`{\"type\":%s`)\n", strconv.Quote(strCaseConst.String()))
+					tmp += fmt.Sprintf("prefix = []byte(`{\"%s\":%s`)\n", tagAttrName, strconv.Quote(strCaseConst.String()))
 				}
 				tmp += "}\n"
 				blk.Add(wdl.RawStmt(tmp))
