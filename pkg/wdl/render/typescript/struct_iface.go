@@ -39,6 +39,7 @@ func (r *RFile) renderStructIface(def *wdl.Struct, w *render.Writer) error {
 			hasOmitTag = strings.Contains(jsonTag, "omitempty")
 		}
 
+		w.Printf("    // %s\n", field.Name())
 		if constValue, ok := field.Tags()["const"]; ok {
 			w.Printf("    %s: '%s'/*%s*/;\n", fieldName(field), constValue, r.TsType(field.TypeDef()))
 		} else {

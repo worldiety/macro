@@ -1,9 +1,9 @@
 package typescript
 
 import (
-	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render"
+	"log/slog"
 )
 
 func (r *RFile) renderStmt(stmt wdl.Statement, w *render.Writer) error {
@@ -12,7 +12,8 @@ func (r *RFile) renderStmt(stmt wdl.Statement, w *render.Writer) error {
 		w.Print(t)
 		return nil
 	default:
-		return fmt.Errorf("unknown statement type: %T", t)
+		slog.Error("unknown statement type in ts, ignoring in code generation: %T", t)
+		return nil
 	}
 
 }
