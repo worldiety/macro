@@ -1,6 +1,7 @@
 package typescript
 
 import (
+	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
 	"github.com/worldiety/macro/pkg/wdl/render"
 	"strings"
@@ -26,6 +27,10 @@ func (r *RFile) renderStructIface(def *wdl.Struct, w *render.Writer) error {
 	for _, field := range def.Fields() {
 		if field.Visibility() != wdl.Public {
 			continue
+		}
+
+		if field.TypeDef() == nil {
+			panic(fmt.Errorf("field type %s.%s is not resolved", def.Name(), field.Name()))
 		}
 
 		fname := fieldName(field)

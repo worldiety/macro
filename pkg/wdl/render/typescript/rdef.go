@@ -18,6 +18,9 @@ func (r *RFile) renderTypeDef(def wdl.TypeDef, w *render.Writer) error {
 		return r.renderDistinctType(d, w)
 	case *wdl.Union:
 		return r.renderUnion(d, w)
+	case *wdl.Interface:
+		w.Print("any")
+		return nil
 	default:
 		slog.Error("rendering not yet implemented", "type", fmt.Sprintf("%T", d))
 	}

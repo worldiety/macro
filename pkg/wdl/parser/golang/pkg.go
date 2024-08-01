@@ -491,6 +491,13 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 
 			case *types.Signature:
 				return p.makeFunc("", dstPkg, file, srcPkg, object, obj), nil
+			case *types.Slice:
+
+				ref, err := p.createRef(obj)
+				if err != nil {
+					return nil, err
+				}
+				return p.getTypeDef(p.Program, ref)
 			default:
 				slog.Error(fmt.Sprintf("named type not implemented %T@%v", obj, pos))
 			}
@@ -835,6 +842,8 @@ func (p *Program) createRef(typ types.Type, generics ...types.Type) (r *wdl.Type
 		maep := p.Program.MustResolveSimple("std", "Map").AsTypeRef()
 		maep.Params = append(maep.Params, refKey, refVal)
 		return maep, nil
+	case *types.Interface:
+		return p.Program.MustResolveSimple("std", "any").AsTypeRef(), nil
 	case *types.Basic:
 		switch t.Kind() {
 		case types.Bool:
@@ -859,6 +868,7 @@ func (p *Program) createRef(typ types.Type, generics ...types.Type) (r *wdl.Type
 			return p.Program.MustResolveSimple("std", "float64").AsTypeRef(), nil
 		case types.Byte:
 			return p.Program.MustResolveSimple("std", "byte").AsTypeRef(), nil
+
 		}
 	}
 

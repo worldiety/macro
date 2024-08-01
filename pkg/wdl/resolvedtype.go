@@ -34,6 +34,9 @@ func (r *ResolvedType) SetPkg(pkg *Package) {
 }
 
 func (r *ResolvedType) Name() Identifier {
+	if r == nil {
+		panic("nil resolved type: is the type actually defined?")
+	}
 	return r.name
 }
 
