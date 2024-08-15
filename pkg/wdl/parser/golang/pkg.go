@@ -842,6 +842,10 @@ func (p *Program) createRef(typ types.Type, generics ...types.Type) (r *wdl.Type
 		maep := p.Program.MustResolveSimple("std", "Map").AsTypeRef()
 		maep.Params = append(maep.Params, refKey, refVal)
 		return maep, nil
+	case *types.Alias:
+		// this is a go 1.23 change, with type params on aliases
+		// TODO implement generics
+		return p.createRef(t.Rhs())
 	case *types.Interface:
 		return p.Program.MustResolveSimple("std", "any").AsTypeRef(), nil
 	case *types.Basic:
@@ -872,7 +876,7 @@ func (p *Program) createRef(typ types.Type, generics ...types.Type) (r *wdl.Type
 		}
 	}
 
-	return nil, fmt.Errorf("cannot create ref for type %s", typ)
+	return nil, fmt.Errorf("cannot create ref for type %s:%T", typ, typ)
 }
 
 // getPackage installs or returns the qualified package.

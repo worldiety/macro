@@ -3,7 +3,7 @@ package typescript
 import (
 	"fmt"
 	"github.com/worldiety/macro/pkg/wdl"
-	"github.com/worldiety/macro/pkg/wdl/render"
+	"log/slog"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -54,11 +54,13 @@ func (r *RFile) TsType(rtype *wdl.ResolvedType) string {
 			panic(fmt.Errorf("implement me: %v", def.Kind()))
 		}
 	case *wdl.Func:
-		tmp := &render.Writer{}
-		if err := r.renderFunc(def, tmp); err != nil {
-			panic(err) // TODO ???
-		}
-		return tmp.String()
+		//tmp := &render.Writer{}
+		//if err := r.renderFunc(def, tmp); err != nil {
+		//	panic(err) // TODO ???
+		//}
+		//return tmp.String()
+		slog.Info("ignored typescript func emitter") // TODO we have some recursion problems, probably type and method name collisions in NAGO/ora protocol
+		return ""
 	case *wdl.TypeParam:
 		return def.Name().String()
 
