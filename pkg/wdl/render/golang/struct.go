@@ -17,7 +17,7 @@ func (r *RFile) renderStruct(def *wdl.Struct, w *render.Writer) error {
 	w.Printf("}\n\n")
 
 	for _, f := range def.Methods() {
-		if err := r.renderFunc(f, w); err != nil {
+		if err := r.renderFunc(false, f, w); err != nil {
 			return err
 		}
 		w.Print("\n")

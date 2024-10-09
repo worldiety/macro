@@ -856,3 +856,164 @@ func MatchExampleType[R any](e ExampleType, onButton func(Button) R, onTextField
 
 	return _onDefault(e.value)
 }
+
+// FruchtLike defines a marker method for the polymorphic interface modelling of any member of the sum type.
+type FruchtLike interface {
+	isFrucht()
+}
+
+func (_ Birne) isFrucht() {
+}
+func (_ Kirsche) isFrucht() {
+}
+
+// This variable is declared to let linters know, that [_Frucht] is used at compile time to generate [Frucht].
+type _ _Frucht
+type Frucht struct {
+	ordinal int
+	value   any
+}
+
+func (e Frucht) Unwrap() any {
+	return e.value
+}
+
+func (e Frucht) Ordinal() int {
+	return e.ordinal
+}
+
+func (e Frucht) Valid() bool {
+	return e.ordinal > 0
+}
+
+// Switch provides an exhaustive and type safe closure callback mechanic. Nil callbacks are allowed. Unmatched branches are delegated into a default case.
+func (e Frucht) Switch(onBirne func(Birne), onKirsche func(Kirsche), _onDefault func(any)) {
+	switch e.ordinal {
+	case 1:
+		if onBirne != nil {
+			onBirne(e.value.(Birne))
+			return
+		}
+	case 2:
+		if onKirsche != nil {
+			onKirsche(e.value.(Kirsche))
+			return
+		}
+	}
+
+	if _onDefault != nil {
+		_onDefault(e.value)
+	}
+}
+
+func (e Frucht) AsBirne() (Birne, bool) {
+	var zero Birne
+	if e.ordinal == 1 {
+		return e.value.(Birne), true
+	}
+
+	return zero, false
+}
+
+func (e Frucht) AsKirsche() (Kirsche, bool) {
+	var zero Kirsche
+	if e.ordinal == 2 {
+		return e.value.(Kirsche), true
+	}
+
+	return zero, false
+}
+
+func (e Frucht) MarshalJSON() ([]byte, error) {
+	if e.ordinal == 0 {
+		return nil, fmt.Errorf("marshalling a zero value is not allowed")
+	}
+
+	// note, that by definition, this kind of encoding does not work with union types which evaluates to null, arrays or primitives.
+	// Chose adjacent encoding instead.
+	type adjacentlyTagged[T any] struct {
+		Type  string `json:"type"`
+		Value T      `json:"content"`
+	}
+
+	switch e.ordinal {
+	case 1:
+		return json.Marshal(adjacentlyTagged[Birne]{
+			Type:  "Birne",
+			Value: e.value.(Birne),
+		})
+	case 2:
+		return json.Marshal(adjacentlyTagged[Kirsche]{
+			Type:  "Kirsche",
+			Value: e.value.(Kirsche),
+		})
+	default:
+		return nil, fmt.Errorf("unknown type ordinal variant '%d'", e.ordinal)
+	}
+}
+
+func (e *Frucht) UnmarshalJSON(bytes []byte) error {
+	typeOnly := struct {
+		Type string `json:"type"`
+	}{}
+	if err := json.Unmarshal(bytes, &typeOnly); err != nil {
+		return err
+	}
+	type adjacentlyTagged[T any] struct {
+		Type  string `json:"type"`
+		Value T      `json:"content"`
+	}
+	switch typeOnly.Type {
+	case "Birne":
+		var value adjacentlyTagged[Birne]
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Birne'")
+		}
+		e.ordinal = 1
+		e.value = value.Value
+	case "Kirsche":
+		var value adjacentlyTagged[Kirsche]
+		if err := json.Unmarshal(bytes, &value); err != nil {
+			return fmt.Errorf("cannot unmarshal variant 'Kirsche'")
+		}
+		e.ordinal = 2
+		e.value = value.Value
+	default:
+		return fmt.Errorf("unknown type variant name '%s'", typeOnly.Type)
+	}
+
+	return nil
+}
+
+func NewFrucht(obj FruchtLike) Frucht {
+	u := Frucht{}
+	switch obj := obj.(type) {
+	case Birne:
+		u.ordinal = 1
+		u.value = obj
+	case Kirsche:
+		u.ordinal = 2
+		u.value = obj
+	default:
+		panic(fmt.Errorf("invalid value: %T", obj))
+	}
+	return u
+}
+func MatchFrucht[R any](e Frucht, onBirne func(Birne) R, onKirsche func(Kirsche) R, _onDefault func(any) R) R {
+	if _onDefault == nil {
+		panic(`missing default match: cannot guarantee exhaustive matching`)
+	}
+
+	switch e.ordinal {
+	case 1:
+		if onBirne != nil {
+			return onBirne(e.value.(Birne))
+		}
+	case 2:
+		if onKirsche != nil {
+			return onKirsche(e.value.(Kirsche))
+		}
+	}
+
+	return _onDefault(e.value)
+}

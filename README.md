@@ -81,6 +81,29 @@ The order and length of the names array must exactly match the union types order
 #[go.TaggedUnion]
 ```
 
+There is also a hybrid mode, where the generated enum-box accepts interfaces instead of all these
+verbose WithX modifiers.
+This only works, if all members of the sum type are defined within the same package, so that we
+can generate a package-private marker interface.
+
+Example:
+```go
+// #[go.TaggedUnion "markerMethod":true]
+type _Frucht interface {
+	Birne | Kirsche
+}
+
+type Birne string
+type Kirsche string
+
+func blub() {
+	var frucht Frucht
+	frucht = NewFrucht(Birne("Helene"))
+	_ = frucht
+
+}
+```
+
 ### Why choice types in Go, there are already interfaces?
 A choice type can be expressed in many ways.
 For us, the developer ergonomic is the most important argument.

@@ -5,20 +5,18 @@ import (
 	"github.com/worldiety/macro/pkg/wdl/render"
 )
 
-func (r *RFile) renderDistinctType(def *wdl.DistinctType, w *render.Writer) error {
-
+func (r *RFile) renderInterface(def *wdl.Interface, w *render.Writer) error {
 	r.parent.writeCommentNode(w, false, "", wdl.NewComment(func(comment *wdl.Comment) {
 		comment.SetLines(def.Comment().Lines())
 	}))
-	decl := r.GoType(def.Underlying().AsResolvedType())
-	w.Printf("type %s %s \n", goAccessorName(def), decl)
-
+	w.Printf("type %s interface {\n", goAccessorName(def))
 	for _, f := range def.Methods() {
-		if err := r.renderFunc(false, f, w); err != nil {
+		if err := r.renderFunc(true, f, w); err != nil {
 			return err
 		}
 		w.Print("\n")
 	}
+	w.Printf("}\n\n")
 
 	return nil
 }

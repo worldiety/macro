@@ -19,6 +19,7 @@ type goTaggedUnionParams struct {
 	TagName            string   `json:"tag"`     // used by internally and adjacently tagged, default is "type"
 	Content            string   `json:"content"` // used by adjacently tagged, default is "content"
 	Names              []string `json:"names"`
+	MarkerMethod       bool     `json:"markerMethod"`
 }
 
 type GoTaggedUnion struct {
@@ -63,6 +64,10 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 
 	if len(opts.Names) > 0 && len(opts.Names) != len(union.Types()) {
 		return fmt.Errorf("names and union types have different length: %d names vs %d types", len(opts.Names), len(union.Types()))
+	}
+
+	if opts.MarkerMethod {
+
 	}
 
 	uStruct := wdl.NewStruct(func(strct *wdl.Struct) {
@@ -209,7 +214,11 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 						blk.Add(wdl.RawStmt(fmt.Sprintf("var zero %s\nif e.ordinal==%d {\nreturn e.value.(%s), true}\n\n return zero, false\n", gtype, ord, gtype)))
 					}))
 				}),
-				wdl.NewFunc(func(fn *wdl.Func) {
+			)
+
+			// only add the more verbose with*** methods if not in marker method mode
+			if !opts.MarkerMethod {
+				strct.AddMethods(wdl.NewFunc(func(fn *wdl.Func) {
 					fn.SetReceiver(wdl.NewParam(func(r *wdl.Param) {
 						r.SetName("e")
 						r.SetTypeDef(strct.AsResolvedType())
@@ -228,8 +237,8 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 					fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
 						blk.Add(wdl.RawStmt(fmt.Sprintf("e.ordinal=%d\ne.value=v\nreturn e", ord)))
 					}))
-				}),
-			)
+				}))
+			}
 		}
 	})
 
@@ -237,6 +246,7 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 		file.AddImport("json", "encoding/json")
 		file.AddImport("fmt", "fmt")
 		file.SetMimeType(wdl.MimeTypeGo)
+		file.SetPkg(union.Pkg())
 
 		file.SetName(strings.ToLower(union.Name().String()) + ".gen.go")
 		file.SetPath(union.File().Path())
@@ -248,6 +258,37 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 			}))
 		}))
 
+		var markerMethodIface *wdl.Interface
+		if opts.MarkerMethod {
+			file.AddTypeDefs(wdl.NewInterface(func(dType *wdl.Interface) {
+				markerMethodIface = dType
+				dType.SetName(uStruct.Name() + "Like")
+				dType.SetVisibility(wdl.Public)
+				dType.SetPkg(file.Pkg())
+				dType.SetComment(wdl.NewSimpleComment(fmt.Sprintf("%s defines a marker method for the polymorphic interface modelling of any member of the sum type.", dType.Name())))
+				dType.AddMethod(wdl.NewFunc(func(fn *wdl.Func) {
+					fn.SetPkg(file.Pkg())
+					fn.SetVisibility(wdl.PackagePrivat)
+					fn.SetName("is" + uStruct.Name())
+				}))
+			}))
+
+			for _, resolvedType := range union.Types() {
+				file.AddTypeDefs(wdl.NewFunc(func(fn *wdl.Func) {
+					fn.SetReceiver(wdl.NewParam(func(r *wdl.Param) {
+						r.SetName("_")
+						r.SetTypeDef(resolvedType)
+					}))
+					fn.SetVisibility(wdl.PackagePrivat)
+					fn.SetName("is" + uStruct.Name())
+
+					fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
+
+					}))
+				}))
+			}
+		}
+
 		file.AddTypeDefs(wdl.NewDistinctType(func(dType *wdl.DistinctType) {
 			dType.SetName("_")
 			dType.SetPkg(file.Pkg())
@@ -255,6 +296,38 @@ func (m *GoTaggedUnion) Expand(def wdl.TypeDef, macroInvoc *wdl.MacroInvocation)
 			dType.SetComment(wdl.NewSimpleComment(fmt.Sprintf("This variable is declared to let linters know, that [%s] is used at compile time to generate [%s].", def.Name(), uStruct.Name())))
 		}))
 		file.AddTypeDefs(uStruct)
+
+		// single iface box constructor if in marker method mode
+		if opts.MarkerMethod {
+			file.AddTypeDefs(wdl.NewFunc(func(fn *wdl.Func) {
+				fn.SetPkg(file.Pkg())
+				fn.SetName("New" + uStruct.Name())
+				fn.SetVisibility(wdl.Public)
+				fn.AddArgs(wdl.NewParam(func(param *wdl.Param) {
+					param.SetName("obj")
+					param.SetTypeDef(markerMethodIface.AsResolvedType())
+				}))
+				fn.AddResults(
+					wdl.NewParam(func(param *wdl.Param) {
+						param.SetTypeDef(uStruct.AsResolvedType())
+					}),
+				)
+				fn.SetBody(wdl.NewBlockStmt(func(blk *wdl.BlockStmt) {
+					blk.Add(wdl.RawStmt(fmt.Sprintf("u:=%s{}\n", uStruct.Name())))
+					blk.Add(wdl.RawStmt("switch obj:=obj.(type) {\n"))
+					tmp := ""
+					for idx, resolvedType := range union.Types() {
+						ord := idx + 1
+						tmp += fmt.Sprintf("case %s: \n", identFrom(resolvedType))
+						tmp += fmt.Sprintf("u.ordinal=%d\n", ord)
+						tmp += fmt.Sprintf("u.value=obj\n")
+					}
+					tmp += "default:\npanic(fmt.Errorf(\"invalid value: %T\", obj))\n}\n"
+					blk.Add(wdl.RawStmt(tmp))
+					blk.Add(wdl.RawStmt("return u\n"))
+				}))
+			}))
+		}
 
 		// free but generic match function
 		file.AddTypeDefs(wdl.NewFunc(func(fn *wdl.Func) {

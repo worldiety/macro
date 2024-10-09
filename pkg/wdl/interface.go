@@ -6,6 +6,8 @@ type Interface struct {
 	types      []*ResolvedType // todo is this also union types?
 	typeParams []*ResolvedType
 	comment    *Comment
+	visibility Visibility
+	methods    []*Func
 }
 
 func (u *Interface) Clone() TypeDef {
@@ -74,4 +76,24 @@ func (u *Interface) Comment() *Comment {
 
 func (u *Interface) SetComment(comment *Comment) {
 	u.comment = comment
+}
+
+func (u *Interface) Visibility() Visibility {
+	return u.visibility
+}
+
+func (u *Interface) SetVisibility(visibility Visibility) {
+	u.visibility = visibility
+}
+
+func (u *Interface) Methods() []*Func {
+	return u.methods
+}
+
+func (u *Interface) SetMethods(methods []*Func) {
+	u.methods = methods
+}
+
+func (u *Interface) AddMethod(method *Func) {
+	u.methods = append(u.methods, method)
 }

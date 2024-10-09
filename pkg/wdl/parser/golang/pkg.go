@@ -530,7 +530,16 @@ func (p *Program) getTypeDef(pg *wdl.Program, ref *wdl.TypeRef) (res wdl.TypeDef
 
 		case *types.Signature:
 			// TODO we have them twice, once as a package level but with receiver and once per actual type, we certainly should resolve to a single instance
-			return p.makeFunc("", dstPkg, file, srcPkg, object, obj), nil
+
+			recName := ""
+			if obj.Recv() != nil {
+				/*ref,err:=p.createRef(obj.Recv().Type())
+				if err!=nil {
+					slog.Error(fmt.Sprintf("cannot resolve receiver %T@%v", obj.Recv(), objPos))
+				}*/
+				recName = obj.Recv().Name() // TODO this is broken with generics
+			}
+			return p.makeFunc(recName, dstPkg, file, srcPkg, object, obj), nil
 		default:
 			slog.Error(fmt.Sprintf("type not implemented %T@%v", obj, objPos))
 		}
@@ -574,7 +583,11 @@ func (p *Program) makeFunc(receiverTypeName string, dstPkg *wdl.Package, file *w
 				if err != nil {
 					slog.Error("error getting def for receiver type", "type", receiverTypeName, "err", err)
 				} else {
-					param.SetTypeDef(def.AsResolvedType())
+					if def == nil {
+						slog.Error("error no definition for param", "receiver", receiverTypeName)
+					} else {
+						param.SetTypeDef(def.AsResolvedType())
+					}
 				}
 			}))
 		}
@@ -642,6 +655,9 @@ func (p *Program) makeFunc(receiverTypeName string, dstPkg *wdl.Package, file *w
 		}
 
 		commentLookupName := wdl.MangeledName(fn.Name().String())
+		if commentLookupName == "_Frucht" {
+			fmt.Println("frucjt")
+		}
 		if receiverTypeName != "" {
 			commentLookupName = wdl.MangeledName(receiverTypeName + "." + fn.Name().String())
 		}

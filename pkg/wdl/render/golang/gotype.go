@@ -31,7 +31,7 @@ func (r *RFile) GoType(rtype *wdl.ResolvedType) string {
 		}
 	case *wdl.Func:
 		tmp := &render.Writer{}
-		if err := r.renderFunc(def, tmp); err != nil {
+		if err := r.renderFunc(false, def, tmp); err != nil {
 			panic(err) // TODO ???
 		}
 		return ptr + tmp.String()

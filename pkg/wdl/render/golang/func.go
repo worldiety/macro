@@ -5,9 +5,11 @@ import (
 	"github.com/worldiety/macro/pkg/wdl/render"
 )
 
-func (r *RFile) renderFunc(f *wdl.Func, w *render.Writer) error {
+func (r *RFile) renderFunc(iface bool, f *wdl.Func, w *render.Writer) error {
 	r.parent.writeComments(w, f.Comment().Lines())
-	w.Printf("func ")
+	if !iface {
+		w.Printf("func ")
+	}
 	if f.Receiver() != nil {
 		w.Printf("(%s %s) ", f.Receiver().Name(), r.GoType(f.Receiver().TypeDef()))
 	}

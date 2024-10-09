@@ -13,9 +13,11 @@ func (r *RFile) renderTypeDef(def wdl.TypeDef, w *render.Writer) error {
 	case *wdl.Struct:
 		return r.renderStruct(d, w)
 	case *wdl.Func:
-		return r.renderFunc(d, w)
+		return r.renderFunc(false, d, w)
 	case *wdl.DistinctType:
 		return r.renderDistinctType(d, w)
+	case *wdl.Interface:
+		return r.renderInterface(d, w)
 	default:
 		slog.Error("rendering not yet implemented", "type", fmt.Sprintf("%T", d))
 	}
